@@ -27,3 +27,14 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+# Supabase internal directories and local secrets
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+
+# Local Edge Function secrets
+supabase/functions/**/.env
+supabase/functions/**/.env.local
+
+# If using service accounts locally
+supabase/functions/service-account.json
