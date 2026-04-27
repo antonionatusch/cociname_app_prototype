@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'src/app/auth_gate_screen.dart';
 import 'src/config/app_env.dart';
 import 'src/core/theme/app_theme.dart';
-import 'src/features/auth/login_screen.dart';
-import 'src/features/auth/register_screen.dart';
-import 'src/features/auth/reset_password_screen.dart';
-import 'src/features/auth/verify_identity_args.dart';
-import 'src/features/auth/verify_identity_screen.dart';
+import 'src/features/auth/repositories/auth_repository.dart';
+import 'src/features/onboarding/repositories/onboarding_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,24 +23,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authRepository = AuthRepository();
+    final onboardingRepository = OnboardingRepository();
+
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'CocinaME',
       theme: AppTheme.light(),
-      initialRoute: LoginScreen.routeName,
-      routes: {
-        LoginScreen.routeName: (_) => const LoginScreen(),
-        RegisterScreen.routeName: (_) => const RegisterScreen(),
-        ResetPasswordScreen.routeName: (_) => const ResetPasswordScreen(),
-      },
-      onGenerateRoute: (settings) {
-        if (settings.name == VerifyIdentityScreen.routeName) {
-          final args = settings.arguments as VerifyIdentityArgs;
-          return MaterialPageRoute(
-            builder: (_) => VerifyIdentityScreen(args: args),
-          );
-        }
-        return null;
-      },
+      home: AuthGateScreen(
+        authRepository: authRepository,
+        onboardingRepository: onboardingRepository,
+      ),
     );
   }
 }
