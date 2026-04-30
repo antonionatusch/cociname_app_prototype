@@ -24,18 +24,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   late final RegisterViewModel _viewModel;
-  String? _identifierError;
 
   @override
   void initState() {
     super.initState();
     _viewModel = RegisterViewModel(widget.authRepository);
-    _identifierController.addListener(_clearIdentifierError);
   }
 
   @override
   void dispose() {
-    _identifierController.removeListener(_clearIdentifierError);
     _firstNameController.dispose();
     _lastNameController.dispose();
     _identifierController.dispose();
@@ -45,13 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _clearIdentifierError() {
-    if (_identifierError == null) return;
-    setState(() => _identifierError = null);
-  }
-
   Future<void> _submit() async {
-    _clearIdentifierError();
     if (!_formKey.currentState!.validate()) return;
 
     try {
@@ -75,12 +66,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } on IdentifierAlreadyTakenException catch (error) {
       if (!mounted) return;
-      setState(() => _identifierError = error.message);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(error.message),
+            action: SnackBarAction(
+              label: 'INICIAR SESION',
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            duration: Duration(seconds: 5),
+            persist: false,
+          ),
+        );
     } on AuthException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      final messenger = ScaffoldMessenger.of(context);
+      messenger
+        ..removeCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -117,7 +122,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onSelectionChanged: (value) {
                     _viewModel.selectMethod(value.first);
                     _identifierController.clear();
-                    _clearIdentifierError();
                   },
                 ),
                 const SizedBox(height: 20),
@@ -155,7 +159,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     labelText: isEmail ? 'Correo' : 'Telefono',
                     hintText: isEmail ? 'nombre@correo.com' : '+59170000001',
                   ),
-                  forceErrorText: _identifierError,
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     if (text.isEmpty) {
