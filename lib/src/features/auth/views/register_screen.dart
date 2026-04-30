@@ -85,9 +85,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
     } on SignUpTimeoutException catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text(_signUpTimeoutMessage)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(_signUpTimeoutMessage),
+          duration: Duration(seconds: 7),
+        ),
+      );
     } on AuthException catch (error) {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);

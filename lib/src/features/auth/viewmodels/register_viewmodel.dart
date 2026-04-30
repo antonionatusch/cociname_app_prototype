@@ -40,7 +40,7 @@ class RegisterViewModel extends ChangeNotifier {
 
     try {
       final shouldSimulateSlow =
-          dotenv.maybeGet(AppEnv.simulateSlowSignup) == 'true';
+          dotenv.maybeGet(AppEnv.simulateSlowConnection) == 'true';
 
       Future<VerifyIdentityArgs> performSignup() async {
         if (shouldSimulateSlow) {
