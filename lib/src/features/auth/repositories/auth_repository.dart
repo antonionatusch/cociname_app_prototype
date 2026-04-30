@@ -3,6 +3,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/verification_method.dart';
 import '../models/verify_identity_args.dart';
 
+class IdentifierAlreadyTakenException implements Exception {
+  const IdentifierAlreadyTakenException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class AuthRepository {
   AuthRepository({SupabaseClient? client})
     : _client = client ?? Supabase.instance.client;
@@ -13,12 +22,32 @@ class AuthRepository {
   User? get currentUser => _client.auth.currentUser;
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
+  Future<bool> isIdentifierAvailable({
+    required VerificationMethod method,
+    required String identifier,
+  }) async {
+    final response = await _client.rpc(
+      'is_auth_identifier_available',
+      params: {
+        'check_method': method == VerificationMethod.email ? 'email' : 'phone',
+        'identifier': identifier,
+      },
+    );
+
+    return response == true;
+  }
+
   Future<VerifyIdentityArgs> signUpWithEmail({
     required String email,
     required String password,
     required String firstName,
     required String lastName,
   }) async {
+    await _ensureIdentifierAvailable(
+      method: VerificationMethod.email,
+      identifier: email,
+    );
+
     await _client.auth.signUp(
       email: email,
       password: password,
@@ -41,6 +70,11 @@ class AuthRepository {
     required String firstName,
     required String lastName,
   }) async {
+    await _ensureIdentifierAvailable(
+      method: VerificationMethod.phone,
+      identifier: phone,
+    );
+
     await _client.auth.signUp(
       phone: phone,
       password: password,
@@ -94,5 +128,23 @@ class AuthRepository {
 
   Future<void> signOut() async {
     await _client.auth.signOut();
+  }
+
+  Future<void> _ensureIdentifierAvailable({
+    required VerificationMethod method,
+    required String identifier,
+  }) async {
+    final isAvailable = await isIdentifierAvailable(
+      method: method,
+      identifier: identifier,
+    );
+
+    if (isAvailable) return;
+
+    throw IdentifierAlreadyTakenException(
+      method == VerificationMethod.email
+          ? 'Este correo ya esta registrado.'
+          : 'Este telefono ya esta registrado.',
+    );
   }
 }
