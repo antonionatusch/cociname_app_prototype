@@ -7,6 +7,9 @@ import '../viewmodels/register_viewmodel.dart';
 import 'verify_identity_screen.dart';
 import 'widgets/auth_shell.dart';
 
+const _signUpTimeoutMessage =
+    'El sistema esta tardando más de lo esperado. Intenta mas tarde.';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, required this.authRepository});
 
@@ -80,6 +83,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             persist: false,
           ),
         );
+    } on SignUpTimeoutException catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(_signUpTimeoutMessage)));
     } on AuthException catch (error) {
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
