@@ -153,7 +153,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Puedes escoger consumidor, cocinero o ambos. Si eliges ambos, primero responderas las 7 preguntas de consumidor y luego las 7 de cocinero.',
+          'Puedes escoger consumidor, emprendedor o ambos. Si eliges ambos, primero responderas las 7 preguntas de consumidor y luego las 7 de emprendedor.',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
         const SizedBox(height: 20),
@@ -316,12 +316,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Suscripcion para cocineros',
+          'Suscripcion para emprendedores',
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 8),
         const Text(
-          'La logica de eleccion de suscripciones todavia esta en construccion. Por ahora, cualquier perfil de cocinero iniciara con el plan Base.',
+          'La logica de eleccion de suscripciones todavia esta en construccion. Por ahora, cualquier perfil de emprendedor iniciara con el plan Base.',
         ),
         const SizedBox(height: 20),
         Container(
@@ -358,7 +358,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       case OnboardingStepKind.roleSelection:
         return 'Paso 1 de ${_viewModel.steps.length}';
       case OnboardingStepKind.subscription:
-        return 'Cocinero · Suscripcion';
+        return 'Emprendedor · Suscripcion';
       case OnboardingStepKind.question:
         final question = step.question!;
         return '${question.role.label} · ${question.questionNumber}/${question.totalQuestions}';

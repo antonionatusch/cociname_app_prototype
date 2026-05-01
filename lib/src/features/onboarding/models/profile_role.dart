@@ -17,7 +17,7 @@ extension ProfileRoleX on ProfileRole {
       case ProfileRole.consumer:
         return 'Consumidor';
       case ProfileRole.cook:
-        return 'Cocinero';
+        return 'Emprendedor';
       case ProfileRole.admin:
         return 'Administrador';
     }

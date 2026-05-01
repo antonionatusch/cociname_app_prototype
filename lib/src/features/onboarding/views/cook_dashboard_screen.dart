@@ -11,7 +11,7 @@ class CookDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Panel cocinero'),
+        title: const Text('Panel emprendedor'),
         actions: [
           IconButton(
             onPressed: sessionViewModel.signOut,
@@ -31,7 +31,7 @@ class CookDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Tu perfil de cocinero ya esta activo con la suscripcion Base. Esta pantalla queda lista como entrada a publicaciones, solicitudes y metricas.',
+              'Tu perfil de emprendedor ya esta activo con la suscripcion Base. Esta pantalla queda lista como entrada a publicaciones, solicitudes y metricas.',
             ),
             const SizedBox(height: 20),
             const Card(

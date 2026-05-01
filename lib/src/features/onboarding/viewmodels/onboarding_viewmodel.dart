@@ -220,7 +220,7 @@ class OnboardingViewModel extends ChangeNotifier {
       role: ProfileRole.cook,
       title: '¿Que te cuesta mas al vender comida?',
       subtitle:
-          'Esto nos ayudara a enriquecer funciones futuras del lado del cocinero.',
+          'Esto nos ayudara a enriquecer funciones futuras del lado del emprendedor.',
       inputType: OnboardingQuestionInputType.multiChoice,
       questionNumber: 6,
       totalQuestions: 7,
