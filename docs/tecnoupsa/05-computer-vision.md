@@ -6,7 +6,7 @@ Para la demo TecnoUPSA, usar un clasificador liviano de plato completo compatibl
 
 ## Por Que No YOLOv8 Primero
 
-YOLOv8 es util para deteccion de objetos con cajas delimitadoras. En esta demo, el problema no es solo detectar objetos visibles. Los ingredientes de empanadas, brownies y pizzas pueden estar ocultos o mezclados.
+YOLOv8 es util para deteccion de objetos con cajas delimitadoras. En esta demo, el problema no es solo detectar objetos visibles. Los ingredientes de empanadas, hamburguesas, cunapes y pizzas pueden estar ocultos o mezclados.
 
 Entrenar YOLOv8 requiere:
 
@@ -27,11 +27,11 @@ Por plazo de dos semanas, usar clasificador liviano.
 
 Clases iniciales:
 
-- `empanada_queso`
+- `empanada_queso_frita`
 - `empanada_queso_integral`
 - `pizza`
-- `brownie_keto`
-- `brownie_normal`
+- `hamburguesa`
+- `cunape`
 - `unknown_food`
 
 Si no se entrena `unknown_food`, resolver desconocido por umbral de confianza.
@@ -76,7 +76,7 @@ Texto recomendado para UI:
 
 ## Ingredientes Sugeridos Por Clase
 
-### `empanada_queso`
+### `empanada_queso_frita`
 
 - harina de trigo
 - queso
@@ -114,33 +114,31 @@ Alergenos:
 - gluten
 - lacteos
 
-### `brownie_normal`
+### `hamburguesa`
 
-- harina de trigo
-- huevo
-- cacao
-- leche o mantequilla
-- azucar
+- pan de hamburguesa
+- carne
+- queso posible
+- huevo posible
+- salsas
 
 Alergenos:
 
 - gluten
-- huevo
-- lacteos
+- lacteos posible
+- huevo posible
 
-### `brownie_keto`
+### `cunape`
 
-- harina de almendra
-- huevo
-- cacao
-- mantequilla o leche
-- edulcorante
+- almidon de yuca
+- queso
+- huevo posible
+- leche o mantequilla posible
 
 Alergenos:
 
-- frutos secos
-- huevo
-- lacteos posible
+- lacteos
+- huevo posible
 
 ## Reglas De Advertencia
 
@@ -160,8 +158,9 @@ Ejemplo:
 Para no bloquear la etapa 1, se permite implementar un mock:
 
 - Si el nombre de archivo contiene `pizza`, devolver `pizza` con `0.92`.
-- Si contiene `brownie`, devolver `brownie_normal` con `0.90`.
-- Si contiene `empanada`, devolver `empanada_queso` con `0.88`.
+- Si contiene `hamburguesa`, devolver `hamburguesa` con `0.90`.
+- Si contiene `cunape`, devolver `cunape` con `0.90`.
+- Si contiene `empanada`, devolver `empanada_queso_frita` con `0.88`.
 - Si no coincide, devolver `unknown_food` con `0.20`.
 
 El mock debe tener la misma interfaz que el servicio TFLite real.

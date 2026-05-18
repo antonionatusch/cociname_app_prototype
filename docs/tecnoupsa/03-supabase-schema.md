@@ -62,11 +62,11 @@ Columnas:
 
 Semillas:
 
-- `empanada_queso`
+- `empanada_queso_frita`
 - `empanada_queso_integral`
 - `pizza`
-- `brownie_keto`
-- `brownie_normal`
+- `hamburguesa`
+- `cunape`
 - `unknown_food`
 
 ## Tabla `dish_publications`
@@ -126,6 +126,9 @@ Semillas minimas:
 
 - harina de trigo
 - harina integral
+- pan de hamburguesa
+- carne
+- almidon de yuca
 - queso
 - leche
 - mantequilla

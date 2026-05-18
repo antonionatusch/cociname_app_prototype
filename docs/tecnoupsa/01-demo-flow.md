@@ -23,7 +23,7 @@ Datos recomendados:
 2. El consumidor inicia sesion.
 3. La app muestra la pantalla de busqueda con mapa.
 4. El consumidor escribe o selecciona:
-   - Plato: `empanada`, `pizza`, `brownie` o busqueda libre.
+   - Plato: `empanada`, `pizza`, `hamburguesa`, `cunape` o busqueda libre.
    - Presupuesto: `35`.
    - Restriccion: `sin gluten`.
    - Radio maximo: `4 km`.

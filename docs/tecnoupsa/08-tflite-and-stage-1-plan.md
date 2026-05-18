@@ -12,8 +12,8 @@ Ejemplo de salida esperada:
 
 ```text
 pizza: 0.92
-empanada_queso: 0.04
-brownie_normal: 0.02
+empanada_queso_frita: 0.04
+hamburguesa: 0.02
 unknown_food: 0.02
 ```
 
@@ -24,11 +24,11 @@ La app no usara el resultado como certificacion sanitaria. Solo lo usara para su
 El modelo inicial debe tener estas clases cerradas:
 
 ```text
-empanada_queso
+empanada_queso_frita
 empanada_queso_integral
 pizza
-brownie_keto
-brownie_normal
+hamburguesa
+cunape
 unknown_food
 ```
 
@@ -101,7 +101,6 @@ sandwich
 ensalada
 arroz
 pollo
-hamburguesa
 pasta
 torta
 frutas
@@ -157,11 +156,11 @@ labels.txt
 El archivo `labels.txt` debe conservar el orden exacto de las clases del modelo. Ejemplo:
 
 ```text
-0 empanada_queso
+0 empanada_queso_frita
 1 empanada_queso_integral
 2 pizza
-3 brownie_keto
-4 brownie_normal
+3 hamburguesa
+4 cunape
 5 unknown_food
 ```
 
@@ -226,8 +225,9 @@ Reglas iniciales:
 
 ```text
 si el nombre del archivo contiene pizza -> pizza con 0.92
-si el nombre del archivo contiene brownie -> brownie_normal con 0.90
-si el nombre del archivo contiene empanada -> empanada_queso con 0.88
+si el nombre del archivo contiene hamburguesa -> hamburguesa con 0.90
+si el nombre del archivo contiene cunape -> cunape con 0.90
+si el nombre del archivo contiene empanada -> empanada_queso_frita con 0.88
 si no coincide -> unknown_food con 0.20
 ```
 
@@ -321,9 +321,9 @@ Agregar triggers de `updated_at` donde corresponda usando la funcion existente `
 Insertar semillas minimas:
 
 ```text
-categorias: empanada_queso, empanada_queso_integral, pizza, brownie_keto, brownie_normal, unknown_food
+categorias: empanada_queso_frita, empanada_queso_integral, pizza, hamburguesa, cunape, unknown_food
 alergenos: gluten, lacteos, huevo, frutos secos, mani, soya
-ingredientes: harina de trigo, harina integral, queso, leche, mantequilla, huevo, cacao, almendra, nuez, mani, tomate, levadura, aceite, edulcorante
+ingredientes: harina de trigo, harina integral, pan de hamburguesa, carne, almidon de yuca, queso, leche, mantequilla, huevo, cacao, almendra, nuez, mani, tomate, levadura, aceite, edulcorante
 relaciones ingrediente-alergeno segun docs/tecnoupsa/07-demo-data-and-testing.md
 ```
 

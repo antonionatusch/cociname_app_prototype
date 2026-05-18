@@ -15,6 +15,9 @@
 
 - harina de trigo -> gluten
 - harina integral -> gluten
+- pan de hamburguesa -> gluten
+- carne -> sin alergeno principal por defecto
+- almidon de yuca -> sin alergeno principal por defecto
 - queso -> lacteos
 - leche -> lacteos
 - mantequilla -> lacteos
@@ -30,11 +33,11 @@
 
 ### Categorias De Plato
 
-- empanada_queso
+- empanada_queso_frita
 - empanada_queso_integral
 - pizza
-- brownie_keto
-- brownie_normal
+- hamburguesa
+- cunape
 - unknown_food
 
 ## Cuentas De Demo
@@ -69,8 +72,8 @@ Preparar imagenes locales en el celular:
 - Empanada de queso.
 - Empanada de queso integral.
 - Pizza.
-- Brownie keto.
-- Brownie normal.
+- Hamburguesa.
+- Cunape.
 - Un alimento desconocido, por ejemplo sopa o sandwich.
 
 ## Pruebas De Etapa 1
