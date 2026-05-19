@@ -85,7 +85,7 @@ class DishPublicationRepository {
     final response = await _client
         .from('dish_publications')
         .select(
-          'id, title, description, price, available_quantity, is_active, zone_label, created_at, dish_photos(storage_path, public_url, position)',
+          'id, title, description, price, available_quantity, is_active, latitude, longitude, zone_label, created_at, dish_photos(storage_path, public_url, position)',
         )
         .order('created_at', ascending: false);
 
@@ -115,6 +115,9 @@ class DishPublicationRepository {
     required String description,
     required double price,
     required int availableQuantity,
+    double? latitude,
+    double? longitude,
+    String? zoneLabel,
   }) async {
     await _client.rpc(
       'update_dish_publication',
@@ -125,6 +128,9 @@ class DishPublicationRepository {
           'description': description,
           'price': price,
           'available_quantity': availableQuantity,
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+          if (zoneLabel != null) 'zone_label': zoneLabel,
         },
       },
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/app_session_viewmodel.dart';
+import '../../consumer/views/consumer_map_home_screen.dart';
 
 class ConsumerHomeScreen extends StatelessWidget {
   const ConsumerHomeScreen({super.key, required this.sessionViewModel});
@@ -11,7 +12,7 @@ class ConsumerHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inicio consumidor'),
+        title: const Text('CocinaME'),
         actions: [
           IconButton(
             onPressed: sessionViewModel.signOut,
@@ -20,30 +21,105 @@ class ConsumerHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hola, ${sessionViewModel.displayName}',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        children: [
+          Text(
+            'Hola, ${sessionViewModel.displayName}',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '¿Qué se te antoja hoy?',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Colors.grey[600],
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Tu perfil de consumidor ya esta creado. Esta pantalla queda como placeholder para los siguientes casos de uso de exploracion y pedidos.',
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ConsumerMapHomeScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.map),
+              label: const Text('Buscar comida en el mapa'),
             ),
-            const SizedBox(height: 20),
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'Proximo paso: explorar ofertas, aplicar filtros y consultar detalle de platos.',
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.map_outlined, size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Mapa',
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned.fill(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ConsumerMapHomeScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Últimas solicitudes',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Icon(Icons.search_off, size: 48, color: Colors.grey[300]),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Aún no has realizado ninguna búsqueda',
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

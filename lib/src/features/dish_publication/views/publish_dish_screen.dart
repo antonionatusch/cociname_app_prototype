@@ -2,22 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../dish_inference/models/inference_capture_result.dart';
+import '../../maps/views/location_picker_screen.dart';
 import '../models/dish_ingredient.dart';
 import '../models/vision.dart';
 import '../utils/display_labels.dart';
 import '../viewmodels/publish_dish_viewmodel.dart';
 
 class PublishDishScreen extends StatelessWidget {
-  const PublishDishScreen({super.key});
+  const PublishDishScreen({super.key, this.captureResult});
+
+  final InferenceCaptureResult? captureResult;
 
   @override
   Widget build(BuildContext context) {
-    return const _PublishDishView();
+    return _PublishDishView(captureResult: captureResult);
   }
 }
 
 class _PublishDishView extends StatelessWidget {
-  const _PublishDishView();
+  const _PublishDishView({this.captureResult});
+
+  final InferenceCaptureResult? captureResult;
 
   @override
   Widget build(BuildContext context) {
@@ -338,34 +344,77 @@ class _LocationSection extends StatelessWidget {
         border: Border.all(color: colorScheme.outline.withValues(alpha: 0.35)),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            vm.hasLocation ? Icons.location_on : Icons.location_searching,
-            color: colorScheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  vm.hasLocation ? 'Ubicación lista' : 'Ubicación pendiente',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Icon(
+                vm.hasLocation ? Icons.location_on : Icons.location_searching,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vm.hasLocation ? 'Ubicación lista' : 'Ubicación pendiente',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      vm.hasLocation
+                          ? vm.locationLabel
+                          : 'Selecciona tu ubicación para la publicación.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  vm.hasLocation
-                      ? vm.locationLabel
-                      : 'Usaremos tu dirección actual para la publicación.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
+              ),
+              TextButton(
+                onPressed: vm.isLoading ? null : vm.captureLocation,
+                child: Text(vm.hasLocation ? 'GPS' : 'GPS'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: vm.isLoading ? null : vm.captureLocation,
-            child: Text(vm.hasLocation ? 'Actualizar' : 'Obtener'),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.of(context).push<dynamic>(
+                      MaterialPageRoute(
+                        builder: (_) => const LocationPickerScreen(),
+                      ),
+                    );
+                    if (result != null && context.mounted) {
+                      vm.setLocation(result);
+                    }
+                  },
+                  icon: const Icon(Icons.map, size: 18),
+                  label: const Text('Elegir en mapa', style: TextStyle(fontSize: 13)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final result = await Navigator.of(context).push<dynamic>(
+                      MaterialPageRoute(
+                        builder: (_) => const LocationPickerScreen(),
+                      ),
+                    );
+                    if (result != null && context.mounted) {
+                      vm.setLocation(result);
+                    }
+                  },
+                  icon: const Icon(Icons.search, size: 18),
+                  label: const Text('Buscar dirección', style: TextStyle(fontSize: 13)),
+                ),
+              ),
+            ],
           ),
         ],
       ),

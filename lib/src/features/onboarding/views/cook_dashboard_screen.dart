@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../../app/app_session_viewmodel.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../consumer/models/consumer_request.dart';
+import '../../dish_inference/models/inference_capture_result.dart';
+import '../../dish_inference/views/dish_inference_capture_screen.dart';
 import '../../dish_publication/models/dish_publication.dart';
 import '../../dish_publication/repositories/dish_publication_repository.dart';
 import '../../dish_publication/repositories/ingredient_repository.dart';
@@ -10,6 +13,9 @@ import '../../dish_publication/services/location_service.dart';
 import '../../dish_publication/services/tflite_vision_classifier_service.dart';
 import '../../dish_publication/viewmodels/publish_dish_viewmodel.dart';
 import '../../dish_publication/views/publish_dish_screen.dart';
+import '../../maps/views/location_picker_screen.dart';
+import '../../offers/views/create_offer_sheet.dart';
+import '../repositories/cook_request_repository.dart';
 import '../viewmodels/cook_dashboard_viewmodel.dart';
 
 class CookDashboardScreen extends StatefulWidget {
@@ -29,6 +35,7 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
     super.didChangeDependencies();
     _viewModel ??= CookDashboardViewModel(
       publicationRepository: context.read<DishPublicationRepository>(),
+      cookRequestRepository: context.read<CookRequestRepository>(),
     )..load();
   }
 
@@ -50,17 +57,35 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
 
     if (!context.mounted) return;
 
-    final result = await Navigator.of(context).push(
+    // Step 1: Capture photo and run inference
+    final captureResult = await Navigator.of(context).push<InferenceCaptureResult>(
+      MaterialPageRoute(
+        builder: (_) => const DishInferenceCaptureScreen(),
+      ),
+    );
+
+    if (captureResult == null) return;
+    if (!context.mounted) return;
+
+    // Step 2: Fill publication details
+    final publishResult = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder:
             (_) => ChangeNotifierProvider(
               create:
-                  (_) => PublishDishViewModel(
-                    classifier: classifier,
-                    locationService: locationService,
-                    publicationRepository: publicationRepo,
-                    ingredientRepository: ingredientRepo,
-                  ),
+                  (_) {
+                    final vm = PublishDishViewModel(
+                      classifier: classifier,
+                      locationService: locationService,
+                      publicationRepository: publicationRepo,
+                      ingredientRepository: ingredientRepo,
+                    );
+                    vm.initializeWithInference(
+                      captureResult.imageFile,
+                      captureResult.inferenceResult,
+                    );
+                    return vm;
+                  },
               child: const PublishDishScreen(),
             ),
       ),
@@ -68,7 +93,7 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
 
     if (!context.mounted) return;
 
-    if (result == true) {
+    if (publishResult == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Plato publicado exitosamente')),
       );
@@ -91,6 +116,9 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
               required description,
               required price,
               required availableQuantity,
+              latitude,
+              longitude,
+              zoneLabel,
             }) async {
               final success = await vm.updatePublication(
                 publicationId: publication.id,
@@ -98,6 +126,9 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                 description: description,
                 price: price,
                 availableQuantity: availableQuantity,
+                latitude: latitude,
+                longitude: longitude,
+                zoneLabel: zoneLabel,
               );
               if (!success) return null;
               return publication.copyWith(
@@ -105,6 +136,9 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                 description: description,
                 price: price,
                 availableQuantity: availableQuantity,
+                latitude: latitude,
+                longitude: longitude,
+                zoneLabel: zoneLabel,
               );
             },
           ),
@@ -220,6 +254,20 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                     const SizedBox(height: 12),
                     _ErrorBanner(message: vm.error!),
                   ],
+                  if (vm.hasIncomingRequests) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      'Solicitudes entrantes',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    ...vm.incomingRequests.map(
+                      (request) => _IncomingRequestCard(
+                        request: request,
+                        publications: vm.publications,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -286,6 +334,96 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _IncomingRequestCard extends StatelessWidget {
+  final ConsumerRequest request;
+  final List<DishPublication> publications;
+
+  const _IncomingRequestCard({
+    required this.request,
+    required this.publications,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.search, color: colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Busca: ${request.queryText}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _InfoChip(label: 'Bs. ${request.targetPrice.toStringAsFixed(0)}'),
+                const SizedBox(width: 8),
+                _InfoChip(label: '${request.maxRadiusKm.toStringAsFixed(0)} km'),
+                if (request.allergenFilters.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  _InfoChip(label: request.allergenFilters.join(', ')),
+                ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () => _showOfferSheet(context),
+                  child: const Text('Ofertar'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOfferSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder:
+          (sheetContext) => CreateOfferSheet(
+            request: request,
+            publications: publications,
+          ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final String label;
+  const _InfoChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12)),
     );
   }
 }
@@ -673,13 +811,15 @@ class _EmptyPublicationsCard extends StatelessWidget {
   }
 }
 
-typedef _SavePublicationEdit =
-    Future<DishPublication?> Function({
-      required String title,
-      required String description,
-      required double price,
-      required int availableQuantity,
-    });
+typedef _SavePublicationEdit = Future<DishPublication?> Function({
+  required String title,
+  required String description,
+  required double price,
+  required int availableQuantity,
+  double? latitude,
+  double? longitude,
+  String? zoneLabel,
+});
 
 class _EditPublicationDialog extends StatefulWidget {
   const _EditPublicationDialog({
@@ -699,6 +839,9 @@ class _EditPublicationDialogState extends State<_EditPublicationDialog> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
   late final TextEditingController _quantityController;
+  double? _latitude;
+  double? _longitude;
+  String? _zoneLabel;
   String? _error;
   bool _isSaving = false;
 
@@ -728,6 +871,8 @@ class _EditPublicationDialogState extends State<_EditPublicationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final hasLocation = _latitude != null && _longitude != null;
+
     return AlertDialog(
       title: const Text('Modificar publicación'),
       content: SingleChildScrollView(
@@ -758,6 +903,31 @@ class _EditPublicationDialogState extends State<_EditPublicationDialog> {
               decoration: const InputDecoration(labelText: 'Cantidad'),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(
+                  hasLocation ? Icons.location_on : Icons.location_searching,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    hasLocation
+                        ? _zoneLabel!
+                        : (widget.publication.zoneLabel ?? 'Sin ubicación'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                TextButton(
+                  onPressed: _pickLocation,
+                  child: const Text('Cambiar'),
+                ),
+              ],
+            ),
             if (_error != null) ...[
               const SizedBox(height: 12),
               Text(_error!, style: const TextStyle(color: AppTheme.error)),
@@ -783,6 +953,19 @@ class _EditPublicationDialogState extends State<_EditPublicationDialog> {
         ),
       ],
     );
+  }
+
+  Future<void> _pickLocation() async {
+    final result = await Navigator.of(context).push<dynamic>(
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _latitude = result.latitude as double;
+        _longitude = result.longitude as double;
+        _zoneLabel = result.addressLabel as String;
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -814,6 +997,9 @@ class _EditPublicationDialogState extends State<_EditPublicationDialog> {
       description: description,
       price: price,
       availableQuantity: quantity,
+      latitude: _latitude,
+      longitude: _longitude,
+      zoneLabel: _zoneLabel,
     );
 
     if (!mounted) return;

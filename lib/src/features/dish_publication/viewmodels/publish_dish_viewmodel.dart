@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../maps/models/selected_location.dart';
 import '../models/dish_ingredient.dart';
 import '../models/enums.dart';
 import '../models/vision.dart';
@@ -28,6 +29,9 @@ class PublishDishViewModel extends ChangeNotifier {
   final List<File> _imageFiles = [];
   List<File> get imageFiles => List.unmodifiable(_imageFiles);
   File? get imageFile => _imageFiles.isEmpty ? null : _imageFiles.first;
+
+  bool _hasConfirmedInference = false;
+  bool get hasConfirmedInference => _hasConfirmedInference;
 
   VisionInferenceResult? _inferenceResult;
   VisionInferenceResult? get inferenceResult => _inferenceResult;
@@ -75,6 +79,25 @@ class PublishDishViewModel extends ChangeNotifier {
     'cunape': ['almidon_yuca', 'queso', 'huevo', 'leche'],
   };
 
+  void initializeWithInference(File firstPhoto, VisionInferenceResult result) {
+    _imageFiles.add(firstPhoto);
+    _inferenceResult = result;
+    _hasConfirmedInference = true;
+    _title = displayFoodLabel(result.label);
+    final category = result.label;
+    final suggestedCodes = _suggestedIngredientsByCategory[category] ?? [];
+    for (final code in suggestedCodes) {
+      _ingredients.add(
+        DishIngredient(
+          ingredientId: code,
+          source: IngredientSource.visionSuggested,
+          isConfirmedByCook: false,
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
   Future<void> pickImage(ImageSource source) async {
     _clearError();
     if (_imageFiles.length >= 3) {
@@ -87,13 +110,8 @@ class PublishDishViewModel extends ChangeNotifier {
     final picked = await picker.pickImage(source: source);
     if (picked == null) return;
 
-    final wasEmpty = _imageFiles.isEmpty;
     _imageFiles.add(File(picked.path));
     notifyListeners();
-
-    if (wasEmpty) {
-      await _runClassification();
-    }
   }
 
   Future<void> pickImagesFromGallery() async {
@@ -109,17 +127,12 @@ class PublishDishViewModel extends ChangeNotifier {
     final picked = await picker.pickMultiImage();
     if (picked.isEmpty) return;
 
-    final wasEmpty = _imageFiles.isEmpty;
     final selected = picked.take(remainingSlots).map((item) => File(item.path));
     _imageFiles.addAll(selected);
     if (picked.length > remainingSlots) {
       _error = 'Solo se agregaron $remainingSlots foto(s). El máximo es 3.';
     }
     notifyListeners();
-
-    if (wasEmpty) {
-      await _runClassification();
-    }
   }
 
   Future<void> removePhoto(int index) async {
@@ -128,6 +141,7 @@ class PublishDishViewModel extends ChangeNotifier {
     _imageFiles.removeAt(index);
     if (_imageFiles.isEmpty) {
       _inferenceResult = null;
+      _hasConfirmedInference = false;
       _title = '';
       _ingredients.clear();
       notifyListeners();
@@ -135,43 +149,11 @@ class PublishDishViewModel extends ChangeNotifier {
     }
 
     notifyListeners();
-    if (removedFirst) {
-      await _runClassification();
+    if (removedFirst && _hasConfirmedInference) {
+      _error = 'La inferencia ya fue realizada para la foto inicial. '
+          'Si cambias la portada, no se ejecutará un nuevo análisis automático.';
+      notifyListeners();
     }
-  }
-
-  Future<void> _runClassification() async {
-    if (imageFile == null || !classifier.isInitialized) return;
-
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final bytes = await imageFile!.readAsBytes();
-      _inferenceResult = await classifier.classify(bytes);
-
-      if (_inferenceResult != null) {
-        final category = _inferenceResult!.label;
-        final suggestedCodes = _suggestedIngredientsByCategory[category] ?? [];
-        _ingredients.clear();
-        for (final code in suggestedCodes) {
-          _ingredients.add(
-            DishIngredient(
-              ingredientId: code,
-              source: IngredientSource.visionSuggested,
-              isConfirmedByCook: false,
-            ),
-          );
-        }
-        _title = displayFoodLabel(category);
-      }
-    } catch (e) {
-      _error = 'Error al clasificar la imagen: $e';
-    }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   void confirmIngredient(int index) {
@@ -250,6 +232,13 @@ class PublishDishViewModel extends ChangeNotifier {
 
   void setQuantityText(String value) {
     _quantityText = value;
+    notifyListeners();
+  }
+
+  void setLocation(SelectedLocation location) {
+    _latitude = location.latitude;
+    _longitude = location.longitude;
+    _zoneLabel = location.addressLabel;
     notifyListeners();
   }
 
@@ -394,6 +383,7 @@ class PublishDishViewModel extends ChangeNotifier {
   void reset() {
     _imageFiles.clear();
     _inferenceResult = null;
+    _hasConfirmedInference = false;
     _title = '';
     _description = '';
     _priceText = '';

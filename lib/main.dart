@@ -12,7 +12,11 @@ import 'src/features/dish_publication/repositories/dish_publication_repository.d
 import 'src/features/dish_publication/repositories/ingredient_repository.dart';
 import 'src/features/dish_publication/services/location_service.dart';
 import 'src/features/dish_publication/services/tflite_vision_classifier_service.dart';
+import 'src/features/consumer/repositories/consumer_request_repository.dart';
+import 'src/features/offers/repositories/offer_repository.dart';
+import 'src/features/onboarding/repositories/cook_request_repository.dart';
 import 'src/features/onboarding/repositories/onboarding_repository.dart';
+import 'src/features/orders/repositories/order_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +42,10 @@ class MyApp extends StatelessWidget {
     );
     final publicationRepository = DishPublicationRepository();
     final ingredientRepository = IngredientRepository();
+    final consumerRequestRepository = ConsumerRequestRepository();
+    final offerRepository = OfferRepository();
+    final orderRepository = OrderRepository();
+    final cookRequestRepository = CookRequestRepository();
 
     return MultiProvider(
       providers: [
@@ -46,6 +54,10 @@ class MyApp extends StatelessWidget {
         Provider.value(value: locationService),
         Provider.value(value: publicationRepository),
         Provider.value(value: ingredientRepository),
+        Provider.value(value: consumerRequestRepository),
+        Provider.value(value: offerRepository),
+        Provider.value(value: orderRepository),
+        Provider.value(value: cookRequestRepository),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

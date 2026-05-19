@@ -30,7 +30,9 @@ class DishPublication {
     required this.price,
     required this.availableQuantity,
     required this.isActive,
-    required this.zoneLabel,
+    this.latitude,
+    this.longitude,
+    this.zoneLabel,
     required this.photos,
   });
 
@@ -40,6 +42,8 @@ class DishPublication {
   final double price;
   final int availableQuantity;
   final bool isActive;
+  final double? latitude;
+  final double? longitude;
   final String? zoneLabel;
   final List<DishPublicationPhoto> photos;
 
@@ -59,6 +63,8 @@ class DishPublication {
           ..sort((a, b) => a.position.compareTo(b.position));
 
     final priceValue = map['price'];
+    final latRaw = map['latitude'];
+    final lngRaw = map['longitude'];
     return DishPublication(
       id: map['id'] as String,
       title: map['title'] as String? ?? '',
@@ -69,6 +75,8 @@ class DishPublication {
               : double.tryParse(priceValue?.toString() ?? '') ?? 0,
       availableQuantity: map['available_quantity'] as int? ?? 0,
       isActive: map['is_active'] as bool? ?? false,
+      latitude: latRaw is num ? latRaw.toDouble() : null,
+      longitude: lngRaw is num ? lngRaw.toDouble() : null,
       zoneLabel: map['zone_label'] as String?,
       photos: rawPhotos,
     );
@@ -80,6 +88,9 @@ class DishPublication {
     double? price,
     int? availableQuantity,
     bool? isActive,
+    double? latitude,
+    double? longitude,
+    String? zoneLabel,
   }) {
     return DishPublication(
       id: id,
@@ -88,7 +99,9 @@ class DishPublication {
       price: price ?? this.price,
       availableQuantity: availableQuantity ?? this.availableQuantity,
       isActive: isActive ?? this.isActive,
-      zoneLabel: zoneLabel,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      zoneLabel: zoneLabel ?? this.zoneLabel,
       photos: photos,
     );
   }

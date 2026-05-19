@@ -1,12 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../../consumer/models/consumer_request.dart';
 import '../../dish_publication/models/dish_publication.dart';
 import '../../dish_publication/repositories/dish_publication_repository.dart';
+import '../repositories/cook_request_repository.dart';
 
 class CookDashboardViewModel extends ChangeNotifier {
-  CookDashboardViewModel({required this.publicationRepository});
+  CookDashboardViewModel({
+    required this.publicationRepository,
+    required this.cookRequestRepository,
+  }) {
+    _startPolling();
+  }
 
   final DishPublicationRepository publicationRepository;
+  final CookRequestRepository cookRequestRepository;
+  Timer? _pollTimer;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -19,6 +30,30 @@ class CookDashboardViewModel extends ChangeNotifier {
 
   List<DishPublication> _publications = const [];
   List<DishPublication> get publications => _publications;
+
+  List<ConsumerRequest> _incomingRequests = const [];
+  List<ConsumerRequest> get incomingRequests => _incomingRequests;
+
+  bool _hasIncomingRequests = false;
+  bool get hasIncomingRequests => _hasIncomingRequests;
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _pollIncomingRequests();
+    });
+  }
+
+  Future<void> _pollIncomingRequests() async {
+    if (!_isAvailable) return;
+
+    try {
+      _incomingRequests = await cookRequestRepository.fetchActiveRequests(
+        maxRadiusKm: 10,
+      );
+      _hasIncomingRequests = _incomingRequests.isNotEmpty;
+      notifyListeners();
+    } catch (_) {}
+  }
 
   Future<void> load() async {
     _isLoading = true;
@@ -38,6 +73,12 @@ class CookDashboardViewModel extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> setAvailability(bool value) async {
@@ -87,6 +128,9 @@ class CookDashboardViewModel extends ChangeNotifier {
     required String description,
     required double price,
     required int availableQuantity,
+    double? latitude,
+    double? longitude,
+    String? zoneLabel,
   }) async {
     _error = null;
     notifyListeners();
@@ -98,6 +142,9 @@ class CookDashboardViewModel extends ChangeNotifier {
         description: description,
         price: price,
         availableQuantity: availableQuantity,
+        latitude: latitude,
+        longitude: longitude,
+        zoneLabel: zoneLabel,
       );
       _publications =
           _publications
