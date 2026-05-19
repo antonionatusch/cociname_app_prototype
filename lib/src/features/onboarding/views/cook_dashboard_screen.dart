@@ -15,9 +15,6 @@ class CookDashboardScreen extends StatelessWidget {
   final AppSessionViewModel sessionViewModel;
 
   Future<void> _navigateToPublish(BuildContext context) async {
-    final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-
     final classifier = context.read<TfliteVisionClassifierService>();
     final locationService = context.read<LocationService>();
     final publicationRepo = context.read<DishPublicationRepository>();
@@ -27,22 +24,28 @@ class CookDashboardScreen extends StatelessWidget {
       await classifier.initialize();
     }
 
-    final result = await navigator.push(
+    if (!context.mounted) return;
+
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider(
-          create: (_) => PublishDishViewModel(
-            classifier: classifier,
-            locationService: locationService,
-            publicationRepository: publicationRepo,
-            ingredientRepository: ingredientRepo,
-          ),
-          child: const PublishDishScreen(),
-        ),
+        builder:
+            (_) => ChangeNotifierProvider(
+              create:
+                  (_) => PublishDishViewModel(
+                    classifier: classifier,
+                    locationService: locationService,
+                    publicationRepository: publicationRepo,
+                    ingredientRepository: ingredientRepo,
+                  ),
+              child: const PublishDishScreen(),
+            ),
       ),
     );
 
+    if (!context.mounted) return;
+
     if (result == true) {
-      messenger.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Plato publicado exitosamente')),
       );
     }
@@ -89,4 +92,3 @@ class CookDashboardScreen extends StatelessWidget {
     );
   }
 }
-

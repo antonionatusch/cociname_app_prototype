@@ -9,10 +9,7 @@ class PublishDishScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => context.read<PublishDishViewModel>(),
-      child: const _PublishDishView(),
-    );
+    return const _PublishDishView();
   }
 }
 
@@ -27,9 +24,7 @@ class _PublishDishView extends StatelessWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.of(context).pop(true);
       });
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -81,7 +76,9 @@ class _PublishDishView extends StatelessWidget {
                           label: 'Precio',
                           value: vm.priceText,
                           onChanged: vm.setPriceText,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -98,7 +95,10 @@ class _PublishDishView extends StatelessWidget {
                   const SizedBox(height: 8),
                   _LocationSection(vm: vm),
                   const SizedBox(height: 16),
-                  const Text('Ingredientes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Ingredientes',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   ...vm.ingredients.asMap().entries.map((entry) {
                     final index = entry.key;
@@ -151,18 +151,27 @@ class _ImagePickerSection extends StatelessWidget {
           ),
         const SizedBox(height: 8),
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton.icon(
-              onPressed: vm.isLoading ? null : () => vm.pickImage(ImageSource.camera),
-              icon: const Icon(Icons.camera_alt),
-              label: const Text('Camara'),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed:
+                    vm.isLoading
+                        ? null
+                        : () => vm.pickImage(ImageSource.camera),
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Camara'),
+              ),
             ),
             const SizedBox(width: 12),
-            ElevatedButton.icon(
-              onPressed: vm.isLoading ? null : () => vm.pickImage(ImageSource.gallery),
-              icon: const Icon(Icons.photo_library),
-              label: const Text('Galeria'),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed:
+                    vm.isLoading
+                        ? null
+                        : () => vm.pickImage(ImageSource.gallery),
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Galeria'),
+              ),
             ),
           ],
         ),
@@ -237,9 +246,7 @@ class _LocationSection extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            vm.title.isNotEmpty
-                ? 'Ubicacion lista'
-                : 'Ubicacion no capturada',
+            vm.title.isNotEmpty ? 'Ubicacion lista' : 'Ubicacion no capturada',
           ),
         ),
         TextButton.icon(
@@ -300,6 +307,12 @@ class _AddIngredientSectionState extends State<_AddIngredientSection> {
   bool _isCustom = false;
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
@@ -316,18 +329,21 @@ class _AddIngredientSectionState extends State<_AddIngredientSection> {
               ),
             ),
             const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                final text = _controller.text.trim();
-                if (text.isEmpty) return;
-                if (_isCustom) {
-                  widget.vm.addCustomIngredient(text);
-                } else {
-                  widget.vm.addKnownIngredient(text);
-                }
-                _controller.clear();
-              },
-              child: const Text('Agregar'),
+            SizedBox(
+              width: 120,
+              child: ElevatedButton(
+                onPressed: () {
+                  final text = _controller.text.trim();
+                  if (text.isEmpty) return;
+                  if (_isCustom) {
+                    widget.vm.addCustomIngredient(text);
+                  } else {
+                    widget.vm.addKnownIngredient(text);
+                  }
+                  _controller.clear();
+                },
+                child: const Text('Agregar'),
+              ),
             ),
           ],
         ),
@@ -337,7 +353,9 @@ class _AddIngredientSectionState extends State<_AddIngredientSection> {
               value: _isCustom,
               onChanged: (v) => setState(() => _isCustom = v ?? false),
             ),
-            const Text('Ingrediente personalizado (no genera alergen)'),
+            const Expanded(
+              child: Text('Ingrediente personalizado (no genera alergen)'),
+            ),
           ],
         ),
       ],
