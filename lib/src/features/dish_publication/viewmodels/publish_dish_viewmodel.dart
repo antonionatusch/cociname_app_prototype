@@ -10,6 +10,7 @@ import '../repositories/dish_publication_repository.dart';
 import '../repositories/ingredient_repository.dart';
 import '../services/location_service.dart';
 import '../services/tflite_vision_classifier_service.dart';
+import '../utils/display_labels.dart';
 
 class PublishDishViewModel extends ChangeNotifier {
   PublishDishViewModel({
@@ -45,6 +46,8 @@ class PublishDishViewModel extends ChangeNotifier {
   double? _latitude;
   double? _longitude;
   String? _zoneLabel;
+  bool get hasLocation => _latitude != null && _longitude != null;
+  String get locationLabel => _zoneLabel ?? 'Ubicación no capturada';
 
   final List<DishIngredient> _ingredients = [];
   List<DishIngredient> get ingredients => List.unmodifiable(_ingredients);
@@ -107,7 +110,7 @@ class PublishDishViewModel extends ChangeNotifier {
             ),
           );
         }
-        _title = category.replaceAll('_', ' ');
+        _title = displayFoodLabel(category);
       }
     } catch (e) {
       _error = 'Error al clasificar la imagen: $e';
@@ -138,14 +141,29 @@ class PublishDishViewModel extends ChangeNotifier {
   }
 
   void addKnownIngredient(String ingredientCode) {
+    final trimmed = ingredientCode.trim();
+    if (trimmed.isEmpty) return;
     _ingredients.add(
       DishIngredient(
-        ingredientId: ingredientCode,
+        ingredientId: trimmed,
         source: IngredientSource.cookManual,
         isConfirmedByCook: true,
       ),
     );
     notifyListeners();
+  }
+
+  void addIngredient(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return;
+
+    final knownCode = knownIngredientCodeFromInput(trimmed);
+    if (knownCode != null) {
+      addKnownIngredient(knownCode);
+      return;
+    }
+
+    addCustomIngredient(displayFreeTextLabel(trimmed));
   }
 
   void addCustomIngredient(String name) {
@@ -189,7 +207,9 @@ class PublishDishViewModel extends ChangeNotifier {
     if (position != null) {
       _latitude = position.latitude;
       _longitude = position.longitude;
-      _zoneLabel = 'Ubicacion capturada';
+      _zoneLabel =
+          result.address ??
+          _formatCoordinates(position.latitude, position.longitude);
       notifyListeners();
     } else {
       _error = _locationErrorMessage(result.failure);
@@ -200,13 +220,17 @@ class PublishDishViewModel extends ChangeNotifier {
   String _locationErrorMessage(LocationFailure? failure) {
     return switch (failure) {
       LocationFailure.serviceDisabled =>
-        'Activa la ubicacion del dispositivo para capturar tu posicion',
+        'Activa la ubicación del dispositivo para capturar tu posición',
       LocationFailure.permissionDenied =>
-        'Necesitamos permiso de ubicacion para publicar el plato',
+        'Necesitamos permiso de ubicación para publicar el plato',
       LocationFailure.permissionPermanentlyDenied =>
-        'El permiso de ubicacion esta bloqueado. Habilitalo desde ajustes',
-      LocationFailure.unavailable || null => 'No se pudo obtener la ubicacion',
+        'El permiso de ubicación está bloqueado. Habilítalo desde ajustes',
+      LocationFailure.unavailable || null => 'No se pudo obtener la ubicación',
     };
+  }
+
+  String _formatCoordinates(double latitude, double longitude) {
+    return '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}';
   }
 
   Future<void> publish() async {
@@ -268,7 +292,7 @@ class PublishDishViewModel extends ChangeNotifier {
 
       _isPublished = true;
     } catch (e) {
-      _error = 'Error al publicar: $e';
+      _error = _publishErrorMessage(e);
     }
 
     _isLoading = false;
@@ -288,6 +312,17 @@ class PublishDishViewModel extends ChangeNotifier {
     }
     if (_ingredients.isEmpty) return 'Agrega al menos un ingrediente';
     return null;
+  }
+
+  String _publishErrorMessage(Object error) {
+    final message = error.toString();
+    if (message.contains('Bucket not found')) {
+      return 'No se pudo subir la foto porque falta configurar el almacenamiento de platos.';
+    }
+    if (message.contains('Usuario no autenticado')) {
+      return 'Tu sesión expiró. Inicia sesión nuevamente para publicar.';
+    }
+    return 'No se pudo publicar el plato. Revisa los datos e inténtalo nuevamente.';
   }
 
   void _clearError() {

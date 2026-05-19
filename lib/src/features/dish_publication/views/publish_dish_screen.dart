@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-import '../models/enums.dart';
+import '../models/dish_ingredient.dart';
 import '../models/vision.dart';
+import '../utils/display_labels.dart';
 import '../viewmodels/publish_dish_viewmodel.dart';
 
 class PublishDishScreen extends StatelessWidget {
@@ -65,7 +66,7 @@ class _PublishDishView extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   _TextField(
-                    label: 'Descripcion',
+                    label: 'Descripción',
                     value: vm.description,
                     onChanged: vm.setDescription,
                     maxLines: 2,
@@ -161,7 +162,7 @@ class _ImagePickerSection extends StatelessWidget {
                         ? null
                         : () => vm.pickImage(ImageSource.camera),
                 icon: const Icon(Icons.camera_alt),
-                label: const Text('Camara'),
+                label: const Text('Cámara'),
               ),
             ),
             const SizedBox(width: 12),
@@ -172,7 +173,7 @@ class _ImagePickerSection extends StatelessWidget {
                         ? null
                         : () => vm.pickImage(ImageSource.gallery),
                 icon: const Icon(Icons.photo_library),
-                label: const Text('Galeria'),
+                label: const Text('Galería'),
               ),
             ),
           ],
@@ -195,12 +196,12 @@ class _InferenceResultCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Detectado: ${result.label.replaceAll('_', ' ')}',
+              'Detectado: ${displayFoodLabel(result.label)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text('Confianza: ${(result.confidence * 100).toStringAsFixed(1)}%'),
-            Text('Estado: ${result.status.databaseValue}'),
+            Text('Resultado: ${displayVisionStatus(result.status)}'),
           ],
         ),
       ),
@@ -208,7 +209,7 @@ class _InferenceResultCard extends StatelessWidget {
   }
 }
 
-class _TextField extends StatelessWidget {
+class _TextField extends StatefulWidget {
   final String label;
   final String value;
   final ValueChanged<String> onChanged;
@@ -223,17 +224,46 @@ class _TextField extends StatelessWidget {
   });
 
   @override
+  State<_TextField> createState() => _TextFieldState();
+}
+
+class _TextFieldState extends State<_TextField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant _TextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value == _controller.text) return;
+    _controller.value = TextEditingValue(
+      text: widget.value,
+      selection: TextSelection.collapsed(offset: widget.value.length),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return TextField(
       decoration: InputDecoration(
-        labelText: label,
+        labelText: widget.label,
         border: const OutlineInputBorder(),
         isDense: true,
       ),
-      controller: TextEditingController(text: value),
-      onChanged: onChanged,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
+      controller: _controller,
+      onChanged: widget.onChanged,
+      maxLines: widget.maxLines,
+      keyboardType: widget.keyboardType,
     );
   }
 }
@@ -244,25 +274,52 @@ class _LocationSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            vm.title.isNotEmpty ? 'Ubicacion lista' : 'Ubicacion no capturada',
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            vm.hasLocation ? Icons.location_on : Icons.location_searching,
+            color: colorScheme.primary,
           ),
-        ),
-        TextButton.icon(
-          onPressed: vm.captureLocation,
-          icon: const Icon(Icons.location_on),
-          label: const Text('Obtener'),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  vm.hasLocation ? 'Ubicación lista' : 'Ubicación pendiente',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  vm.hasLocation
+                      ? vm.locationLabel
+                      : 'Usaremos tu dirección actual para la publicación.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: vm.isLoading ? null : vm.captureLocation,
+            child: Text(vm.hasLocation ? 'Actualizar' : 'Obtener'),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _IngredientTile extends StatelessWidget {
-  final dynamic ingredient;
+  final DishIngredient ingredient;
   final VoidCallback onConfirm;
   final VoidCallback onRemove;
   const _IngredientTile({
@@ -275,7 +332,11 @@ class _IngredientTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       dense: true,
-      title: Text(ingredient.displayName),
+      title: Text(displayIngredientLabel(ingredient.displayName)),
+      subtitle:
+          ingredient.isConfirmedByCook
+              ? null
+              : const Text('Sugerido por la foto. Confírmalo si aplica.'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -283,7 +344,7 @@ class _IngredientTile extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: onConfirm,
-              tooltip: 'Confirmar',
+              tooltip: 'Confirmar ingrediente',
             ),
           IconButton(
             icon: const Icon(Icons.delete),
@@ -306,7 +367,6 @@ class _AddIngredientSection extends StatefulWidget {
 
 class _AddIngredientSectionState extends State<_AddIngredientSection> {
   final _controller = TextEditingController();
-  bool _isCustom = false;
 
   @override
   void dispose() {
@@ -325,43 +385,41 @@ class _AddIngredientSectionState extends State<_AddIngredientSection> {
                 controller: _controller,
                 decoration: const InputDecoration(
                   labelText: 'Agregar ingrediente',
+                  hintText: 'Ej.: harina integral',
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _addIngredient(),
               ),
             ),
             const SizedBox(width: 8),
             SizedBox(
               width: 120,
               child: ElevatedButton(
-                onPressed: () {
-                  final text = _controller.text.trim();
-                  if (text.isEmpty) return;
-                  if (_isCustom) {
-                    widget.vm.addCustomIngredient(text);
-                  } else {
-                    widget.vm.addKnownIngredient(text);
-                  }
-                  _controller.clear();
-                },
+                onPressed: _addIngredient,
                 child: const Text('Agregar'),
               ),
             ),
           ],
         ),
-        Row(
-          children: [
-            Checkbox(
-              value: _isCustom,
-              onChanged: (v) => setState(() => _isCustom = v ?? false),
-            ),
-            const Expanded(
-              child: Text('Ingrediente personalizado (no genera alergen)'),
-            ),
-          ],
+        const SizedBox(height: 6),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Si coincide con el catálogo, se usará para detectar alérgenos. Si no, se guardará como texto libre.',
+            style: TextStyle(fontSize: 12),
+          ),
         ),
       ],
     );
+  }
+
+  void _addIngredient() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    widget.vm.addIngredient(text);
+    _controller.clear();
   }
 }
 
