@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'src/app/auth_gate_screen.dart';
 import 'src/config/app_env.dart';
+import 'src/core/services/permission_service.dart';
 import 'src/core/theme/app_theme.dart';
 import 'src/features/auth/repositories/auth_repository.dart';
 import 'src/features/dish_publication/repositories/dish_publication_repository.dart';
@@ -31,12 +32,16 @@ class MyApp extends StatelessWidget {
     final authRepository = AuthRepository();
     final onboardingRepository = OnboardingRepository();
     final classifier = TfliteVisionClassifierService();
-    final locationService = LocationService();
+    final permissionService = PermissionService();
+    final locationService = LocationService(
+      permissionService: permissionService,
+    );
     final publicationRepository = DishPublicationRepository();
     final ingredientRepository = IngredientRepository();
 
     return MultiProvider(
       providers: [
+        Provider.value(value: permissionService),
         Provider.value(value: classifier),
         Provider.value(value: locationService),
         Provider.value(value: publicationRepository),

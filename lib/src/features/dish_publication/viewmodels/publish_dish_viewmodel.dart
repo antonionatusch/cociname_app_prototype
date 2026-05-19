@@ -61,7 +61,12 @@ class PublishDishViewModel extends ChangeNotifier {
   static const Map<String, List<String>> _suggestedIngredientsByCategory = {
     'pizza': ['harina_trigo', 'queso', 'tomate', 'levadura'],
     'empanada_queso_frita': ['harina_trigo', 'queso', 'mantequilla', 'huevo'],
-    'empanada_queso_integral': ['harina_integral', 'queso', 'mantequilla', 'huevo'],
+    'empanada_queso_integral': [
+      'harina_integral',
+      'queso',
+      'mantequilla',
+      'huevo',
+    ],
     'hamburguesa': ['pan_hamburguesa', 'carne', 'queso', 'huevo'],
     'cunape': ['almidon_yuca', 'queso', 'huevo', 'leche'],
   };
@@ -94,11 +99,13 @@ class PublishDishViewModel extends ChangeNotifier {
         final suggestedCodes = _suggestedIngredientsByCategory[category] ?? [];
         _ingredients.clear();
         for (final code in suggestedCodes) {
-          _ingredients.add(DishIngredient(
-            ingredientId: code,
-            source: IngredientSource.visionSuggested,
-            isConfirmedByCook: false,
-          ));
+          _ingredients.add(
+            DishIngredient(
+              ingredientId: code,
+              source: IngredientSource.visionSuggested,
+              isConfirmedByCook: false,
+            ),
+          );
         }
         _title = category.replaceAll('_', ' ');
       }
@@ -131,22 +138,26 @@ class PublishDishViewModel extends ChangeNotifier {
   }
 
   void addKnownIngredient(String ingredientCode) {
-    _ingredients.add(DishIngredient(
-      ingredientId: ingredientCode,
-      source: IngredientSource.cookManual,
-      isConfirmedByCook: true,
-    ));
+    _ingredients.add(
+      DishIngredient(
+        ingredientId: ingredientCode,
+        source: IngredientSource.cookManual,
+        isConfirmedByCook: true,
+      ),
+    );
     notifyListeners();
   }
 
   void addCustomIngredient(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
-    _ingredients.add(DishIngredient(
-      customName: trimmed,
-      source: IngredientSource.customManual,
-      isConfirmedByCook: true,
-    ));
+    _ingredients.add(
+      DishIngredient(
+        customName: trimmed,
+        source: IngredientSource.customManual,
+        isConfirmedByCook: true,
+      ),
+    );
     notifyListeners();
   }
 
@@ -172,16 +183,30 @@ class PublishDishViewModel extends ChangeNotifier {
 
   Future<void> captureLocation() async {
     _clearError();
-    final position = await locationService.getCurrentPosition();
+    final result = await locationService.getCurrentPosition();
+    final position = result.position;
+
     if (position != null) {
       _latitude = position.latitude;
       _longitude = position.longitude;
       _zoneLabel = 'Ubicacion capturada';
       notifyListeners();
     } else {
-      _error = 'No se pudo obtener la ubicacion';
+      _error = _locationErrorMessage(result.failure);
       notifyListeners();
     }
+  }
+
+  String _locationErrorMessage(LocationFailure? failure) {
+    return switch (failure) {
+      LocationFailure.serviceDisabled =>
+        'Activa la ubicacion del dispositivo para capturar tu posicion',
+      LocationFailure.permissionDenied =>
+        'Necesitamos permiso de ubicacion para publicar el plato',
+      LocationFailure.permissionPermanentlyDenied =>
+        'El permiso de ubicacion esta bloqueado. Habilitalo desde ajustes',
+      LocationFailure.unavailable || null => 'No se pudo obtener la ubicacion',
+    };
   }
 
   Future<void> publish() async {
@@ -200,22 +225,25 @@ class PublishDishViewModel extends ChangeNotifier {
     try {
       final photoPath = await publicationRepository.uploadPhoto(_imageFile!);
 
-      final knownIngredients = _ingredients
-          .where((i) => i.isKnown)
-          .map((i) => {
-                'code': i.ingredientId,
-                'source': i.source.databaseValue,
-                'is_confirmed_by_cook': i.isConfirmedByCook,
-              })
-          .toList();
+      final knownIngredients =
+          _ingredients
+              .where((i) => i.isKnown)
+              .map(
+                (i) => {
+                  'code': i.ingredientId,
+                  'source': i.source.databaseValue,
+                  'is_confirmed_by_cook': i.isConfirmedByCook,
+                },
+              )
+              .toList();
 
-      final customIngredients = _ingredients
-          .where((i) => !i.isKnown)
-          .map((i) => {
-                'name': i.customName,
-                'source': i.source.databaseValue,
-              })
-          .toList();
+      final customIngredients =
+          _ingredients
+              .where((i) => !i.isKnown)
+              .map(
+                (i) => {'name': i.customName, 'source': i.source.databaseValue},
+              )
+              .toList();
 
       final visionLog = _inferenceResult?.toLogPayload();
 
