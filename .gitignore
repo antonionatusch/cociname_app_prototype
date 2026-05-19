@@ -49,3 +49,18 @@ windows/flutter/generated_plugin_registrant.h
 windows/flutter/generated_plugins.cmake
 
 macos/Flutter/GeneratedPluginRegistrant.swift
+
+
+# Android Studio / IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Visual Studio Code related
+.vscode/
+
+# Miscellaneous
+*.log
+*.lock
+.DS_Store
