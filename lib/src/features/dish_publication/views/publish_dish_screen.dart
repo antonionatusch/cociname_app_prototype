@@ -217,7 +217,7 @@ class _ImagePickerSection extends StatelessWidget {
                         ? null
                         : () => vm.pickImage(ImageSource.camera),
                 icon: const Icon(Icons.camera_alt),
-                label: const Text('Cámara'),
+                label: const Text('Tomar foto'),
               ),
             ),
             const SizedBox(width: 12),
@@ -226,9 +226,9 @@ class _ImagePickerSection extends StatelessWidget {
                 onPressed:
                     vm.isLoading || vm.imageFiles.length >= 3
                         ? null
-                        : () => vm.pickImage(ImageSource.gallery),
+                        : vm.pickImagesFromGallery,
                 icon: const Icon(Icons.photo_library),
-                label: const Text('Galería'),
+                label: const Text('Galería múltiple'),
               ),
             ),
           ],

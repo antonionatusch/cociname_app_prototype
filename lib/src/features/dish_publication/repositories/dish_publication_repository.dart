@@ -109,6 +109,43 @@ class DishPublicationRepository {
         .eq('id', publicationId);
   }
 
+  Future<void> updatePublication({
+    required String publicationId,
+    required String title,
+    required String description,
+    required double price,
+    required int availableQuantity,
+  }) async {
+    await _client.rpc(
+      'update_dish_publication',
+      params: {
+        'p_publication_id': publicationId,
+        'payload': {
+          'title': title,
+          'description': description,
+          'price': price,
+          'available_quantity': availableQuantity,
+        },
+      },
+    );
+  }
+
+  Future<void> deletePausedPublication(DishPublication publication) async {
+    final storagePaths = await _client.rpc(
+      'delete_paused_dish_publication',
+      params: {'p_publication_id': publication.id},
+    );
+
+    final paths =
+        storagePaths is List<dynamic>
+            ? storagePaths.map((item) => item.toString()).toList()
+            : publication.photos.map((item) => item.storagePath).toList();
+
+    if (paths.isNotEmpty) {
+      await _client.storage.from('dish-photos').remove(paths);
+    }
+  }
+
   Future<bool> fetchCookAvailability() async {
     final response =
         await _client
@@ -120,6 +157,9 @@ class DishPublicationRepository {
   }
 
   Future<void> setCookAvailability(bool isAvailable) async {
-    await _client.from('cook_profiles').update({'is_available': isAvailable});
+    await _client.rpc(
+      'set_cook_availability',
+      params: {'p_is_available': isAvailable},
+    );
   }
 }

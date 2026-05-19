@@ -74,13 +74,19 @@ class DishPublication {
     );
   }
 
-  DishPublication copyWith({bool? isActive}) {
+  DishPublication copyWith({
+    String? title,
+    String? description,
+    double? price,
+    int? availableQuantity,
+    bool? isActive,
+  }) {
     return DishPublication(
       id: id,
-      title: title,
-      description: description,
-      price: price,
-      availableQuantity: availableQuantity,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      availableQuantity: availableQuantity ?? this.availableQuantity,
       isActive: isActive ?? this.isActive,
       zoneLabel: zoneLabel,
       photos: photos,

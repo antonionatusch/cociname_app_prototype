@@ -96,6 +96,32 @@ class PublishDishViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> pickImagesFromGallery() async {
+    _clearError();
+    final remainingSlots = 3 - _imageFiles.length;
+    if (remainingSlots <= 0) {
+      _error = 'Puedes agregar hasta 3 fotos por plato';
+      notifyListeners();
+      return;
+    }
+
+    final picker = ImagePicker();
+    final picked = await picker.pickMultiImage();
+    if (picked.isEmpty) return;
+
+    final wasEmpty = _imageFiles.isEmpty;
+    final selected = picked.take(remainingSlots).map((item) => File(item.path));
+    _imageFiles.addAll(selected);
+    if (picked.length > remainingSlots) {
+      _error = 'Solo se agregaron $remainingSlots foto(s). El máximo es 3.';
+    }
+    notifyListeners();
+
+    if (wasEmpty) {
+      await _runClassification();
+    }
+  }
+
   Future<void> removePhoto(int index) async {
     if (index < 0 || index >= _imageFiles.length) return;
     final removedFirst = index == 0;

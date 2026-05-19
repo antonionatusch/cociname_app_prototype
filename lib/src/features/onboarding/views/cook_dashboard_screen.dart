@@ -76,6 +76,105 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
     }
   }
 
+  Future<DishPublication?> _editPublication(
+    BuildContext context,
+    CookDashboardViewModel vm,
+    DishPublication publication,
+  ) async {
+    final updated = await showDialog<DishPublication>(
+      context: context,
+      builder:
+          (dialogContext) => _EditPublicationDialog(
+            publication: publication,
+            onSave: ({
+              required title,
+              required description,
+              required price,
+              required availableQuantity,
+            }) async {
+              final success = await vm.updatePublication(
+                publicationId: publication.id,
+                title: title,
+                description: description,
+                price: price,
+                availableQuantity: availableQuantity,
+              );
+              if (!success) return null;
+              return publication.copyWith(
+                title: title,
+                description: description,
+                price: price,
+                availableQuantity: availableQuantity,
+              );
+            },
+          ),
+    );
+
+    if (updated != null && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Publicación actualizada')));
+    }
+    return updated;
+  }
+
+  Future<bool> _deletePublication(
+    BuildContext context,
+    CookDashboardViewModel vm,
+    DishPublication publication,
+  ) async {
+    if (publication.isActive) {
+      await showDialog<void>(
+        context: context,
+        builder:
+            (dialogContext) => AlertDialog(
+              title: const Text('Pausa la publicación primero'),
+              content: const Text(
+                'Antes de borrar esta publicación debes desactivarla. Esto evita eliminar un plato que todavía puede recibir solicitudes.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Entendido'),
+                ),
+              ],
+            ),
+      );
+      return false;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Borrar publicación'),
+            content: Text(
+              '¿Quieres borrar "${publication.title}"? Esta acción no se puede deshacer.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Borrar'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed != true) return false;
+
+    final deleted = await vm.deletePublication(publication);
+    if (deleted && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Publicación eliminada')));
+    }
+    return deleted;
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = _viewModel;
@@ -148,6 +247,10 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                         onActiveChanged:
                             (value) =>
                                 vm.setPublicationActive(publication.id, value),
+                        onEdit:
+                            () => _editPublication(context, vm, publication),
+                        onDelete:
+                            () => _deletePublication(context, vm, publication),
                         onTap:
                             () => Navigator.of(context).push(
                               MaterialPageRoute(
@@ -158,6 +261,18 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                                           (value) => vm.setPublicationActive(
                                             publication.id,
                                             value,
+                                          ),
+                                      onEdit:
+                                          (current) => _editPublication(
+                                            context,
+                                            vm,
+                                            current,
+                                          ),
+                                      onDelete:
+                                          (current) => _deletePublication(
+                                            context,
+                                            vm,
+                                            current,
                                           ),
                                     ),
                               ),
@@ -263,15 +378,21 @@ class _AvailabilityHeader extends StatelessWidget {
   }
 }
 
+enum _PublicationAction { edit, delete }
+
 class _PublicationCard extends StatelessWidget {
   const _PublicationCard({
     required this.publication,
     required this.onActiveChanged,
+    required this.onEdit,
+    required this.onDelete,
     required this.onTap,
   });
 
   final DishPublication publication;
   final ValueChanged<bool> onActiveChanged;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
   final VoidCallback onTap;
 
   @override
@@ -323,7 +444,27 @@ class _PublicationCard extends StatelessWidget {
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ),
-                        const Icon(Icons.chevron_right),
+                        PopupMenuButton<_PublicationAction>(
+                          onSelected: (action) {
+                            switch (action) {
+                              case _PublicationAction.edit:
+                                onEdit();
+                              case _PublicationAction.delete:
+                                onDelete();
+                            }
+                          },
+                          itemBuilder:
+                              (context) => const [
+                                PopupMenuItem(
+                                  value: _PublicationAction.edit,
+                                  child: Text('Modificar'),
+                                ),
+                                PopupMenuItem(
+                                  value: _PublicationAction.delete,
+                                  child: Text('Borrar'),
+                                ),
+                              ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -362,10 +503,14 @@ class DishPublicationDetailScreen extends StatefulWidget {
     super.key,
     required this.publication,
     required this.onActiveChanged,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final DishPublication publication;
   final ValueChanged<bool> onActiveChanged;
+  final Future<DishPublication?> Function(DishPublication publication) onEdit;
+  final Future<bool> Function(DishPublication publication) onDelete;
 
   @override
   State<DishPublicationDetailScreen> createState() =>
@@ -375,17 +520,48 @@ class DishPublicationDetailScreen extends StatefulWidget {
 class _DishPublicationDetailScreenState
     extends State<DishPublicationDetailScreen> {
   late bool _isActive;
+  late DishPublication _publication;
 
   @override
   void initState() {
     super.initState();
-    _isActive = widget.publication.isActive;
+    _publication = widget.publication;
+    _isActive = _publication.isActive;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.publication.title)),
+      appBar: AppBar(
+        title: Text(_publication.title),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final updated = await widget.onEdit(_publication);
+              if (updated != null && mounted) {
+                setState(
+                  () => _publication = updated.copyWith(isActive: _isActive),
+                );
+              }
+            },
+            icon: const Icon(Icons.edit),
+            tooltip: 'Modificar',
+          ),
+          IconButton(
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final deleted = await widget.onDelete(
+                _publication.copyWith(isActive: _isActive),
+              );
+              if (deleted && mounted) {
+                navigator.pop();
+              }
+            },
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Borrar',
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -393,10 +569,10 @@ class _DishPublicationDetailScreenState
             height: 260,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: widget.publication.photos.length,
+              itemCount: _publication.photos.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
-                final photo = widget.publication.photos[index];
+                final photo = _publication.photos[index];
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: Image.network(
@@ -421,7 +597,7 @@ class _DishPublicationDetailScreenState
             children: [
               Expanded(
                 child: Text(
-                  widget.publication.title,
+                  _publication.title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -432,15 +608,15 @@ class _DishPublicationDetailScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Bs ${widget.publication.price.toStringAsFixed(2)}',
+            'Bs ${_publication.price.toStringAsFixed(2)}',
             style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          Text(widget.publication.description),
+          Text(_publication.description),
           const SizedBox(height: 14),
-          Text('Cantidad disponible: ${widget.publication.availableQuantity}'),
-          if (widget.publication.zoneLabel != null)
-            Text('Zona: ${widget.publication.zoneLabel}'),
+          Text('Cantidad disponible: ${_publication.availableQuantity}'),
+          if (_publication.zoneLabel != null)
+            Text('Zona: ${_publication.zoneLabel}'),
           const SizedBox(height: 22),
           SwitchListTile(
             value: _isActive,
@@ -494,6 +670,162 @@ class _EmptyPublicationsCard extends StatelessWidget {
         child: Text('Aun no tienes platos publicados.'),
       ),
     );
+  }
+}
+
+typedef _SavePublicationEdit =
+    Future<DishPublication?> Function({
+      required String title,
+      required String description,
+      required double price,
+      required int availableQuantity,
+    });
+
+class _EditPublicationDialog extends StatefulWidget {
+  const _EditPublicationDialog({
+    required this.publication,
+    required this.onSave,
+  });
+
+  final DishPublication publication;
+  final _SavePublicationEdit onSave;
+
+  @override
+  State<_EditPublicationDialog> createState() => _EditPublicationDialogState();
+}
+
+class _EditPublicationDialogState extends State<_EditPublicationDialog> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _quantityController;
+  String? _error;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.publication.title);
+    _descriptionController = TextEditingController(
+      text: widget.publication.description,
+    );
+    _priceController = TextEditingController(
+      text: widget.publication.price.toStringAsFixed(2),
+    );
+    _quantityController = TextEditingController(
+      text: widget.publication.availableQuantity.toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    _quantityController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Modificar publicación'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Nombre del plato'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(labelText: 'Descripción'),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _priceController,
+              decoration: const InputDecoration(labelText: 'Precio'),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _quantityController,
+              decoration: const InputDecoration(labelText: 'Cantidad'),
+              keyboardType: TextInputType.number,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: const TextStyle(color: AppTheme.error)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _isSaving ? null : _save,
+          child:
+              _isSaving
+                  ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    final price = double.tryParse(_priceController.text.trim());
+    final quantity = int.tryParse(_quantityController.text.trim());
+
+    if (title.isEmpty) {
+      setState(() => _error = 'Ingresa el nombre del plato');
+      return;
+    }
+    if (price == null || price <= 0) {
+      setState(() => _error = 'El precio debe ser mayor a 0');
+      return;
+    }
+    if (quantity == null || quantity <= 0) {
+      setState(() => _error = 'La cantidad debe ser mayor a 0');
+      return;
+    }
+
+    setState(() {
+      _error = null;
+      _isSaving = true;
+    });
+
+    final updated = await widget.onSave(
+      title: title,
+      description: description,
+      price: price,
+      availableQuantity: quantity,
+    );
+
+    if (!mounted) return;
+    if (updated == null) {
+      setState(() {
+        _isSaving = false;
+        _error = 'No se pudo guardar la publicación';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(updated);
   }
 }
 

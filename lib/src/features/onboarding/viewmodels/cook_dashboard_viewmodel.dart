@@ -43,6 +43,7 @@ class CookDashboardViewModel extends ChangeNotifier {
   Future<void> setAvailability(bool value) async {
     final previous = _isAvailable;
     _isAvailable = value;
+    _error = null;
     notifyListeners();
 
     try {
@@ -65,6 +66,7 @@ class CookDashboardViewModel extends ChangeNotifier {
                       : publication,
             )
             .toList();
+    _error = null;
     notifyListeners();
 
     try {
@@ -76,6 +78,67 @@ class CookDashboardViewModel extends ChangeNotifier {
       _publications = previous;
       _error = 'No se pudo actualizar el plato.';
       notifyListeners();
+    }
+  }
+
+  Future<bool> updatePublication({
+    required String publicationId,
+    required String title,
+    required String description,
+    required double price,
+    required int availableQuantity,
+  }) async {
+    _error = null;
+    notifyListeners();
+
+    try {
+      await publicationRepository.updatePublication(
+        publicationId: publicationId,
+        title: title,
+        description: description,
+        price: price,
+        availableQuantity: availableQuantity,
+      );
+      _publications =
+          _publications
+              .map(
+                (publication) =>
+                    publication.id == publicationId
+                        ? publication.copyWith(
+                          title: title,
+                          description: description,
+                          price: price,
+                          availableQuantity: availableQuantity,
+                        )
+                        : publication,
+              )
+              .toList();
+      notifyListeners();
+      return true;
+    } catch (_) {
+      _error = 'No se pudo modificar la publicación.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deletePublication(DishPublication publication) async {
+    _error = null;
+    notifyListeners();
+
+    try {
+      await publicationRepository.deletePausedPublication(publication);
+      _publications =
+          _publications.where((item) => item.id != publication.id).toList();
+      notifyListeners();
+      return true;
+    } catch (_) {
+      _error =
+          publication.isActive
+              ? 'Pausa la publicación antes de eliminarla.'
+              : 'No se pudo eliminar la publicación.';
+      notifyListeners();
+      return false;
     }
   }
 }
