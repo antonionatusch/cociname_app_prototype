@@ -25,8 +25,9 @@ class PublishDishViewModel extends ChangeNotifier {
   final DishPublicationRepository publicationRepository;
   final IngredientRepository ingredientRepository;
 
-  File? _imageFile;
-  File? get imageFile => _imageFile;
+  final List<File> _imageFiles = [];
+  List<File> get imageFiles => List.unmodifiable(_imageFiles);
+  File? get imageFile => _imageFiles.isEmpty ? null : _imageFiles.first;
 
   VisionInferenceResult? _inferenceResult;
   VisionInferenceResult? get inferenceResult => _inferenceResult;
@@ -76,25 +77,52 @@ class PublishDishViewModel extends ChangeNotifier {
 
   Future<void> pickImage(ImageSource source) async {
     _clearError();
+    if (_imageFiles.length >= 3) {
+      _error = 'Puedes agregar hasta 3 fotos por plato';
+      notifyListeners();
+      return;
+    }
+
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source);
     if (picked == null) return;
 
-    _imageFile = File(picked.path);
+    final wasEmpty = _imageFiles.isEmpty;
+    _imageFiles.add(File(picked.path));
     notifyListeners();
 
-    await _runClassification();
+    if (wasEmpty) {
+      await _runClassification();
+    }
+  }
+
+  Future<void> removePhoto(int index) async {
+    if (index < 0 || index >= _imageFiles.length) return;
+    final removedFirst = index == 0;
+    _imageFiles.removeAt(index);
+    if (_imageFiles.isEmpty) {
+      _inferenceResult = null;
+      _title = '';
+      _ingredients.clear();
+      notifyListeners();
+      return;
+    }
+
+    notifyListeners();
+    if (removedFirst) {
+      await _runClassification();
+    }
   }
 
   Future<void> _runClassification() async {
-    if (_imageFile == null || !classifier.isInitialized) return;
+    if (imageFile == null || !classifier.isInitialized) return;
 
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final bytes = await _imageFile!.readAsBytes();
+      final bytes = await imageFile!.readAsBytes();
       _inferenceResult = await classifier.classify(bytes);
 
       if (_inferenceResult != null) {
@@ -247,7 +275,14 @@ class PublishDishViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final photoPath = await publicationRepository.uploadPhoto(_imageFile!);
+      final photoPaths = <String>[];
+      for (var index = 0; index < _imageFiles.length; index++) {
+        final photoPath = await publicationRepository.uploadPhoto(
+          _imageFiles[index],
+          position: index + 1,
+        );
+        photoPaths.add(photoPath);
+      }
 
       final knownIngredients =
           _ingredients
@@ -284,7 +319,7 @@ class PublishDishViewModel extends ChangeNotifier {
         latitude: _latitude,
         longitude: _longitude,
         zoneLabel: _zoneLabel,
-        photoStoragePath: photoPath,
+        photoStoragePaths: photoPaths,
         ingredients: knownIngredients,
         customIngredients: customIngredients,
         visionLog: visionLog,
@@ -300,7 +335,8 @@ class PublishDishViewModel extends ChangeNotifier {
   }
 
   String? _validate() {
-    if (_imageFile == null) return 'Selecciona una foto';
+    if (_imageFiles.isEmpty) return 'Selecciona al menos una foto';
+    if (_imageFiles.length > 3) return 'Puedes agregar hasta 3 fotos por plato';
     if (_title.trim().isEmpty) return 'Ingresa el nombre del plato';
     if (_priceText.isEmpty) return 'Ingresa el precio';
     if (double.tryParse(_priceText) == null || double.parse(_priceText) <= 0) {
@@ -330,7 +366,7 @@ class PublishDishViewModel extends ChangeNotifier {
   }
 
   void reset() {
-    _imageFile = null;
+    _imageFiles.clear();
     _inferenceResult = null;
     _title = '';
     _description = '';

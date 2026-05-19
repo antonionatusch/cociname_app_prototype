@@ -138,27 +138,82 @@ class _ImagePickerSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (vm.imageFile != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.file(vm.imageFile!, height: 200, fit: BoxFit.cover),
-          )
-        else
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(child: Text('Sin imagen')),
-          ),
+        SizedBox(
+          height: 210,
+          child:
+              vm.imageFiles.isEmpty
+                  ? Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(child: Text('Sin imagen')),
+                  )
+                  : ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: vm.imageFiles.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              vm.imageFiles[index],
+                              width: 220,
+                              height: 210,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Positioned(
+                            left: 8,
+                            bottom: 8,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                child: Text(
+                                  index == 0 ? 'Portada' : 'Foto ${index + 1}',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: IconButton.filled(
+                              onPressed:
+                                  vm.isLoading
+                                      ? null
+                                      : () => vm.removePhoto(index),
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Quitar foto',
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${vm.imageFiles.length}/3 fotos. La primera sera la portada del dashboard.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: ElevatedButton.icon(
                 onPressed:
-                    vm.isLoading
+                    vm.isLoading || vm.imageFiles.length >= 3
                         ? null
                         : () => vm.pickImage(ImageSource.camera),
                 icon: const Icon(Icons.camera_alt),
@@ -169,7 +224,7 @@ class _ImagePickerSection extends StatelessWidget {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed:
-                    vm.isLoading
+                    vm.isLoading || vm.imageFiles.length >= 3
                         ? null
                         : () => vm.pickImage(ImageSource.gallery),
                 icon: const Icon(Icons.photo_library),
