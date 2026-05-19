@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../models/enums.dart';
+import '../models/vision.dart';
 import '../viewmodels/publish_dish_viewmodel.dart';
 
 class PublishDishScreen extends StatelessWidget {
@@ -181,7 +183,7 @@ class _ImagePickerSection extends StatelessWidget {
 }
 
 class _InferenceResultCard extends StatelessWidget {
-  final dynamic result;
+  final VisionInferenceResult result;
   const _InferenceResultCard({required this.result});
 
   @override
@@ -198,7 +200,7 @@ class _InferenceResultCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text('Confianza: ${(result.confidence * 100).toStringAsFixed(1)}%'),
-            Text('Estado: ${result.status.name}'),
+            Text('Estado: ${result.status.databaseValue}'),
           ],
         ),
       ),
