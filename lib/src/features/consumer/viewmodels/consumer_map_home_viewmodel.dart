@@ -89,7 +89,9 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
 
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       _latitude = position.latitude;
       _longitude = position.longitude;
@@ -171,6 +173,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
         longitude: _longitude,
       );
       _activeRequestId = requestId;
+      _receivedOffers = const [];
       _searchStatus = 'Solicitud creada. Esperando ofertas...';
       _startOfferPolling();
       return requestId;
@@ -186,10 +189,18 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
 
   Future<void> cancelSearch() async {
     if (_activeRequestId != null) {
-      await requestRepository.cancelRequest(_activeRequestId!);
-      _activeRequestId = null;
-      _searchStatus = '';
-      notifyListeners();
+      try {
+        await requestRepository.cancelRequest(_activeRequestId!);
+        _offerPollTimer?.cancel();
+        _activeRequestId = null;
+        _receivedOffers = const [];
+        _searchStatus = '';
+        _error = null;
+        notifyListeners();
+      } catch (e) {
+        _error = 'No se pudo cancelar la busqueda: $e';
+        notifyListeners();
+      }
     }
   }
 
@@ -228,6 +239,8 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
       await orderRepository.acceptOffer(offerId);
       _offerPollTimer?.cancel();
       final order = await orderRepository.fetchActiveOrder();
+      _activeRequestId = null;
+      _receivedOffers = const [];
       return order;
     } catch (e) {
       _error = 'Error al aceptar oferta: $e';
@@ -242,4 +255,3 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
     super.dispose();
   }
 }
-

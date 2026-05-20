@@ -52,9 +52,9 @@ class ConsumerRequestRepository {
   }
 
   Future<void> cancelRequest(String requestId) async {
-    await _client
-        .from('consumer_requests')
-        .update({'status': 'cancelled'})
-        .eq('id', requestId);
+    await _client.rpc(
+      'cancel_consumer_request',
+      params: {'p_request_id': requestId},
+    );
   }
 }

@@ -32,14 +32,23 @@ class OfferRepository {
   }
 
   Future<List<CookOffer>> fetchOffersForRequest(String requestId) async {
-    final response = await _client
-        .from('cook_offers')
-        .select()
-        .eq('request_id', requestId)
-        .order('created_at', ascending: false);
+    final response = await _client.rpc(
+      'get_offers_for_request',
+      params: {'p_request_id': requestId},
+    );
 
-    return (response as List<dynamic>)
-        .map((item) => CookOffer.fromMap(item as Map<String, dynamic>))
-        .toList();
+    return (response as List<dynamic>).map((item) {
+      final map = Map<String, dynamic>.from(item as Map);
+      final storagePath = map['dish_photo_storage_path'] as String?;
+      final publicUrl = map['dish_photo_public_url'] as String?;
+      if ((publicUrl == null || publicUrl.isEmpty) &&
+          storagePath != null &&
+          storagePath.isNotEmpty) {
+        map['dish_photo_public_url'] = _client.storage
+            .from('dish-photos')
+            .getPublicUrl(storagePath);
+      }
+      return CookOffer.fromMap(map);
+    }).toList();
   }
 }

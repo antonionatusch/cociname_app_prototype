@@ -5,18 +5,22 @@ import 'package:flutter/foundation.dart';
 import '../../consumer/models/consumer_request.dart';
 import '../../dish_publication/models/dish_publication.dart';
 import '../../dish_publication/repositories/dish_publication_repository.dart';
+import '../../orders/models/order.dart';
+import '../../orders/repositories/order_repository.dart';
 import '../repositories/cook_request_repository.dart';
 
 class CookDashboardViewModel extends ChangeNotifier {
   CookDashboardViewModel({
     required this.publicationRepository,
     required this.cookRequestRepository,
+    required this.orderRepository,
   }) {
     _startPolling();
   }
 
   final DishPublicationRepository publicationRepository;
   final CookRequestRepository cookRequestRepository;
+  final OrderRepository orderRepository;
   Timer? _pollTimer;
 
   bool _isLoading = false;
@@ -33,13 +37,18 @@ class CookDashboardViewModel extends ChangeNotifier {
 
   List<ConsumerRequest> _incomingRequests = const [];
   List<ConsumerRequest> get incomingRequests => _incomingRequests;
+  final Set<String> _ignoredRequestIds = {};
 
   bool _hasIncomingRequests = false;
   bool get hasIncomingRequests => _hasIncomingRequests;
 
+  Order? _activeOrder;
+  Order? get activeOrder => _activeOrder;
+
   void _startPolling() {
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       _pollIncomingRequests();
+      _pollActiveOrder();
     });
   }
 
@@ -50,8 +59,30 @@ class CookDashboardViewModel extends ChangeNotifier {
       _incomingRequests = await cookRequestRepository.fetchActiveRequests(
         maxRadiusKm: 10,
       );
+      _incomingRequests =
+          _incomingRequests
+              .where((request) => !_ignoredRequestIds.contains(request.id))
+              .toList();
       _hasIncomingRequests = _incomingRequests.isNotEmpty;
       notifyListeners();
+    } catch (_) {}
+  }
+
+  void ignoreRequest(String requestId) {
+    _ignoredRequestIds.add(requestId);
+    _incomingRequests =
+        _incomingRequests.where((request) => request.id != requestId).toList();
+    _hasIncomingRequests = _incomingRequests.isNotEmpty;
+    notifyListeners();
+  }
+
+  Future<void> _pollActiveOrder() async {
+    try {
+      final order = await orderRepository.fetchActiveOrder();
+      if (order?.id != _activeOrder?.id) {
+        _activeOrder = order;
+        notifyListeners();
+      }
     } catch (_) {}
   }
 
@@ -67,6 +98,7 @@ class CookDashboardViewModel extends ChangeNotifier {
       ]);
       _publications = results[0] as List<DishPublication>;
       _isAvailable = results[1] as bool;
+      await _pollActiveOrder();
     } catch (_) {
       _error = 'No se pudo cargar tu panel. Intentalo nuevamente.';
     }

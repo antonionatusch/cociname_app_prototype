@@ -15,6 +15,8 @@ import '../../dish_publication/viewmodels/publish_dish_viewmodel.dart';
 import '../../dish_publication/views/publish_dish_screen.dart';
 import '../../maps/views/location_picker_screen.dart';
 import '../../offers/views/create_offer_sheet.dart';
+import '../../orders/repositories/order_repository.dart';
+import '../../orders/views/active_order_screen.dart';
 import '../repositories/cook_request_repository.dart';
 import '../viewmodels/cook_dashboard_viewmodel.dart';
 
@@ -29,6 +31,7 @@ class CookDashboardScreen extends StatefulWidget {
 
 class _CookDashboardScreenState extends State<CookDashboardScreen> {
   CookDashboardViewModel? _viewModel;
+  bool _openingActiveOrder = false;
 
   @override
   void didChangeDependencies() {
@@ -36,6 +39,7 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
     _viewModel ??= CookDashboardViewModel(
       publicationRepository: context.read<DishPublicationRepository>(),
       cookRequestRepository: context.read<CookRequestRepository>(),
+      orderRepository: context.read<OrderRepository>(),
     )..load();
   }
 
@@ -58,10 +62,10 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
     if (!context.mounted) return;
 
     // Step 1: Capture photo and run inference
-    final captureResult = await Navigator.of(context).push<InferenceCaptureResult>(
-      MaterialPageRoute(
-        builder: (_) => const DishInferenceCaptureScreen(),
-      ),
+    final captureResult = await Navigator.of(
+      context,
+    ).push<InferenceCaptureResult>(
+      MaterialPageRoute(builder: (_) => const DishInferenceCaptureScreen()),
     );
 
     if (captureResult == null) return;
@@ -72,20 +76,19 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
       MaterialPageRoute(
         builder:
             (_) => ChangeNotifierProvider(
-              create:
-                  (_) {
-                    final vm = PublishDishViewModel(
-                      classifier: classifier,
-                      locationService: locationService,
-                      publicationRepository: publicationRepo,
-                      ingredientRepository: ingredientRepo,
-                    );
-                    vm.initializeWithInference(
-                      captureResult.imageFile,
-                      captureResult.inferenceResult,
-                    );
-                    return vm;
-                  },
+              create: (_) {
+                final vm = PublishDishViewModel(
+                  classifier: classifier,
+                  locationService: locationService,
+                  publicationRepository: publicationRepo,
+                  ingredientRepository: ingredientRepo,
+                );
+                vm.initializeWithInference(
+                  captureResult.imageFile,
+                  captureResult.inferenceResult,
+                );
+                return vm;
+              },
               child: const PublishDishScreen(),
             ),
       ),
@@ -231,6 +234,20 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
         ),
         body: Consumer<CookDashboardViewModel>(
           builder: (context, vm, _) {
+            if (vm.activeOrder != null && !_openingActiveOrder) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted || _openingActiveOrder || vm.activeOrder == null) {
+                  return;
+                }
+                _openingActiveOrder = true;
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => ActiveOrderScreen(order: vm.activeOrder!),
+                  ),
+                );
+              });
+            }
+
             return RefreshIndicator(
               onRefresh: vm.load,
               child: ListView(
@@ -265,6 +282,7 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                       (request) => _IncomingRequestCard(
                         request: request,
                         publications: vm.publications,
+                        onIgnore: () => vm.ignoreRequest(request.id),
                       ),
                     ),
                   ],
@@ -341,10 +359,12 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
 class _IncomingRequestCard extends StatelessWidget {
   final ConsumerRequest request;
   final List<DishPublication> publications;
+  final VoidCallback onIgnore;
 
   const _IncomingRequestCard({
     required this.request,
     required this.publications,
+    required this.onIgnore,
   });
 
   @override
@@ -372,9 +392,13 @@ class _IncomingRequestCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                _InfoChip(label: 'Bs. ${request.targetPrice.toStringAsFixed(0)}'),
+                _InfoChip(
+                  label: 'Bs. ${request.targetPrice.toStringAsFixed(0)}',
+                ),
                 const SizedBox(width: 8),
-                _InfoChip(label: '${request.maxRadiusKm.toStringAsFixed(0)} km'),
+                _InfoChip(
+                  label: '${request.maxRadiusKm.toStringAsFixed(0)} km',
+                ),
                 if (request.allergenFilters.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   _InfoChip(label: request.allergenFilters.join(', ')),
@@ -385,6 +409,7 @@ class _IncomingRequestCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                TextButton(onPressed: onIgnore, child: const Text('Ignorar')),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: () => _showOfferSheet(context),
@@ -398,16 +423,15 @@ class _IncomingRequestCard extends StatelessWidget {
     );
   }
 
-  void _showOfferSheet(BuildContext context) {
-    showModalBottomSheet(
+  Future<void> _showOfferSheet(BuildContext context) async {
+    final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       builder:
-          (sheetContext) => CreateOfferSheet(
-            request: request,
-            publications: publications,
-          ),
+          (sheetContext) =>
+              CreateOfferSheet(request: request, publications: publications),
     );
+    if (created == true) onIgnore();
   }
 }
 
@@ -811,15 +835,16 @@ class _EmptyPublicationsCard extends StatelessWidget {
   }
 }
 
-typedef _SavePublicationEdit = Future<DishPublication?> Function({
-  required String title,
-  required String description,
-  required double price,
-  required int availableQuantity,
-  double? latitude,
-  double? longitude,
-  String? zoneLabel,
-});
+typedef _SavePublicationEdit =
+    Future<DishPublication?> Function({
+      required String title,
+      required String description,
+      required double price,
+      required int availableQuantity,
+      double? latitude,
+      double? longitude,
+      String? zoneLabel,
+    });
 
 class _EditPublicationDialog extends StatefulWidget {
   const _EditPublicationDialog({

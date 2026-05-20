@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latlong;
 import 'package:provider/provider.dart';
 
 import '../../../core/services/permission_service.dart';
@@ -39,23 +40,22 @@ class _ConsumerMapView extends StatefulWidget {
 
 class _ConsumerMapViewState extends State<_ConsumerMapView> {
   final _mapController = MapController();
-  final _queryController = TextEditingController();
-  final _budgetController = TextEditingController();
-  final _radiusController = TextEditingController();
   bool _showSearchPanel = false;
+  String? _searchInitialQuery;
 
   @override
   void dispose() {
     _mapController.dispose();
-    _queryController.dispose();
-    _budgetController.dispose();
-    _radiusController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ConsumerMapHomeViewModel>();
+    final offerLocations =
+        vm.receivedOffers
+            .where((offer) => offer.hasPublicationLocation)
+            .toList();
 
     return Scaffold(
       body: Stack(
@@ -71,42 +71,78 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.cociname.app',
               ),
-              if (vm.showMarkers)
+              if (vm.showMarkers || offerLocations.isNotEmpty)
                 MarkerLayer(
                   markers: [
-                    Marker(
-                      point: vm.currentLatLng,
-                      width: 40,
-                      height: 40,
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.blue,
-                        size: 28,
+                    if (vm.showMarkers)
+                      Marker(
+                        point: vm.currentLatLng,
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Colors.blue,
+                          size: 28,
+                        ),
                       ),
-                    ),
-                    ...vm.cooks.map(
-                      (cook) => Marker(
-                        point: cook.latLng,
-                        width: 60,
-                        height: 60,
-                        child: GestureDetector(
-                          onTap: () => _showCookInfo(context, vm, cook.id),
+                    if (vm.showMarkers)
+                      ...vm.cooks.map(
+                        (cook) => Marker(
+                          point: cook.latLng,
+                          width: 60,
+                          height: 60,
+                          child: GestureDetector(
+                            onTap: () => _showCookInfo(context, vm, cook.id),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.restaurant,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ...offerLocations.map(
+                      (offer) => Marker(
+                        point: latlong.LatLng(
+                          offer.publicationLatitude!,
+                          offer.publicationLongitude!,
+                        ),
+                        width: 64,
+                        height: 64,
+                        child: Tooltip(
+                          message: offer.cookBusinessName ?? 'Oferta recibida',
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.orange,
+                              color: Colors.green[700],
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
+                              border: Border.all(color: Colors.white, width: 3),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 4,
+                                  blurRadius: 6,
                                 ),
                               ],
                             ),
                             child: const Icon(
-                              Icons.restaurant,
+                              Icons.local_dining,
                               color: Colors.white,
-                              size: 28,
+                              size: 30,
                             ),
                           ),
                         ),
@@ -116,13 +152,14 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
                 ),
             ],
           ),
-          _TopBar(onSearchTap: () => setState(() => _showSearchPanel = true)),
-          if (_showSearchPanel) _SearchPanel(vm: vm),
-          _BottomPanel(
-            vm: vm,
-            onSearch:
-                () => setState(() => _showSearchPanel = !_showSearchPanel),
-          ),
+          _TopBar(onSearchTap: () => _openSearchPanel()),
+          if (_showSearchPanel)
+            _SearchPanel(
+              vm: vm,
+              initialQuery: _searchInitialQuery,
+              onClose: () => setState(() => _showSearchPanel = false),
+            ),
+          _BottomPanel(vm: vm, onQuickSearch: _openSearchPanel),
           if (vm.isLoadingLocation)
             const Positioned(
               top: 100,
@@ -140,6 +177,13 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
         ],
       ),
     );
+  }
+
+  void _openSearchPanel([String? query]) {
+    setState(() {
+      _searchInitialQuery = query;
+      _showSearchPanel = true;
+    });
   }
 
   void _showCookInfo(
@@ -256,7 +300,14 @@ class _TopBar extends StatelessWidget {
 
 class _SearchPanel extends StatefulWidget {
   final ConsumerMapHomeViewModel vm;
-  const _SearchPanel({required this.vm});
+  final String? initialQuery;
+  final VoidCallback onClose;
+
+  const _SearchPanel({
+    required this.vm,
+    required this.initialQuery,
+    required this.onClose,
+  });
 
   @override
   State<_SearchPanel> createState() => _SearchPanelState();
@@ -268,6 +319,20 @@ class _SearchPanelState extends State<_SearchPanel> {
   final _radiusController = TextEditingController(text: '4');
   bool _isCreating = false;
   String? _validationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _queryController.text = widget.initialQuery ?? '';
+  }
+
+  @override
+  void didUpdateWidget(covariant _SearchPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialQuery != oldWidget.initialQuery) {
+      _queryController.text = widget.initialQuery ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -285,7 +350,7 @@ class _SearchPanelState extends State<_SearchPanel> {
       right: 0,
       bottom: 0,
       child: GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
+        onTap: widget.onClose,
         child: Container(
           color: Colors.black26,
           child: SafeArea(
@@ -478,21 +543,22 @@ class _SearchPanelState extends State<_SearchPanel> {
       _isCreating = true;
     });
 
-    await widget.vm.createSearchRequest(
+    final requestId = await widget.vm.createSearchRequest(
       query: query,
       budget: budget,
       maxRadius: radius,
     );
 
     if (mounted) setState(() => _isCreating = false);
+    if (requestId != null && mounted) widget.onClose();
   }
 }
 
 class _BottomPanel extends StatelessWidget {
   final ConsumerMapHomeViewModel vm;
-  final VoidCallback onSearch;
+  final ValueChanged<String> onQuickSearch;
 
-  const _BottomPanel({required this.vm, required this.onSearch});
+  const _BottomPanel({required this.vm, required this.onQuickSearch});
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +588,7 @@ class _BottomPanel extends StatelessWidget {
             else if (vm.activeRequestId != null)
               _SearchingStatus(vm: vm)
             else
-              _DefaultChips(onSearch: onSearch, vm: vm),
+              _DefaultChips(onQuickSearch: onQuickSearch, vm: vm),
           ],
         ),
       ),
@@ -592,21 +658,81 @@ class _OffersList extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
+                      if (offer.dishPhotoPublicUrl != null &&
+                          offer.dishPhotoPublicUrl!.isNotEmpty) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            offer.dishPhotoPublicUrl!,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) => Container(
+                                  width: 56,
+                                  height: 56,
+                                  color: Colors.orange[50],
+                                  child: const Icon(Icons.restaurant),
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
+                              offer.dishTitle ?? 'Oferta de plato',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (offer.cookBusinessName != null)
+                              Text(
+                                offer.cookBusinessName!,
+                                style: TextStyle(color: Colors.grey[700]),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            Text(
                               'Bs. ${offer.price.toStringAsFixed(2)}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontSize: 15,
                               ),
                             ),
-                            if (offer.estimatedMinutes != null)
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                if (offer.estimatedMinutes != null)
+                                  Text(
+                                    '${offer.estimatedMinutes} min',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                if (offer.distanceKm != null)
+                                  Text(
+                                    '${offer.distanceKm!.toStringAsFixed(1)} km',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                if (offer.cookRatingAverage != null)
+                                  Text(
+                                    '${offer.cookRatingAverage!.toStringAsFixed(1)} ★',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                              ],
+                            ),
+                            if (offer.allergenCodes.isNotEmpty)
                               Text(
-                                '${offer.estimatedMinutes} min',
-                                style: TextStyle(color: Colors.grey[600]),
+                                'Alergenos: ${offer.allergenCodes.join(', ')}',
+                                style: TextStyle(
+                                  color: Colors.orange[800],
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             if (offer.message.isNotEmpty)
                               Text(
@@ -662,10 +788,10 @@ class _OffersList extends StatelessWidget {
 }
 
 class _DefaultChips extends StatelessWidget {
-  final VoidCallback onSearch;
+  final ValueChanged<String> onQuickSearch;
   final ConsumerMapHomeViewModel vm;
 
-  const _DefaultChips({required this.onSearch, required this.vm});
+  const _DefaultChips({required this.onQuickSearch, required this.vm});
 
   @override
   Widget build(BuildContext context) {
@@ -698,7 +824,7 @@ class _DefaultChips extends StatelessWidget {
                 child: _QuickChip(
                   icon: Icons.egg,
                   label: 'Empanada',
-                  onTap: () {},
+                  onTap: () => onQuickSearch('empanada'),
                 ),
               ),
               const SizedBox(width: 8),
@@ -706,7 +832,7 @@ class _DefaultChips extends StatelessWidget {
                 child: _QuickChip(
                   icon: Icons.local_pizza,
                   label: 'Pizza',
-                  onTap: () {},
+                  onTap: () => onQuickSearch('pizza'),
                 ),
               ),
               const SizedBox(width: 8),
@@ -714,7 +840,7 @@ class _DefaultChips extends StatelessWidget {
                 child: _QuickChip(
                   icon: Icons.lunch_dining,
                   label: 'Hamburguesa',
-                  onTap: () {},
+                  onTap: () => onQuickSearch('hamburguesa'),
                 ),
               ),
               const SizedBox(width: 8),
@@ -722,7 +848,7 @@ class _DefaultChips extends StatelessWidget {
                 child: _QuickChip(
                   icon: Icons.cookie,
                   label: 'Cuñapé',
-                  onTap: () {},
+                  onTap: () => onQuickSearch('cuñapé'),
                 ),
               ),
             ],

@@ -8,6 +8,15 @@ class Order {
   final double agreedPrice;
   final String status;
   final DateTime createdAt;
+  final String? dishTitle;
+  final String? cookBusinessName;
+  final String? consumerDisplayName;
+  final double? publicationLatitude;
+  final double? publicationLongitude;
+  final double? consumerLatitude;
+  final double? consumerLongitude;
+  final String? dishPhotoStoragePath;
+  final String? dishPhotoPublicUrl;
 
   const Order({
     required this.id,
@@ -19,7 +28,22 @@ class Order {
     required this.agreedPrice,
     this.status = 'active',
     required this.createdAt,
+    this.dishTitle,
+    this.cookBusinessName,
+    this.consumerDisplayName,
+    this.publicationLatitude,
+    this.publicationLongitude,
+    this.consumerLatitude,
+    this.consumerLongitude,
+    this.dishPhotoStoragePath,
+    this.dishPhotoPublicUrl,
   });
+
+  bool get hasPublicationLocation =>
+      publicationLatitude != null && publicationLongitude != null;
+
+  bool get hasConsumerLocation =>
+      consumerLatitude != null && consumerLongitude != null;
 
   factory Order.fromMap(Map<String, dynamic> map) {
     return Order(
@@ -32,7 +56,17 @@ class Order {
       agreedPrice: (map['agreed_price'] as num?)?.toDouble() ?? 0,
       status: map['status'] as String? ?? 'active',
       createdAt:
-          DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime.now(),
+          DateTime.tryParse(map['created_at'] as String? ?? '') ??
+          DateTime.now(),
+      dishTitle: map['dish_title'] as String?,
+      cookBusinessName: map['cook_business_name'] as String?,
+      consumerDisplayName: map['consumer_display_name'] as String?,
+      publicationLatitude: (map['publication_latitude'] as num?)?.toDouble(),
+      publicationLongitude: (map['publication_longitude'] as num?)?.toDouble(),
+      consumerLatitude: (map['consumer_latitude'] as num?)?.toDouble(),
+      consumerLongitude: (map['consumer_longitude'] as num?)?.toDouble(),
+      dishPhotoStoragePath: map['dish_photo_storage_path'] as String?,
+      dishPhotoPublicUrl: map['dish_photo_public_url'] as String?,
     );
   }
 }

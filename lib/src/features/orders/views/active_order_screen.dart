@@ -20,6 +20,19 @@ class ActiveOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final center =
+        order.hasPublicationLocation
+            ? latlong.LatLng(
+              order.publicationLatitude!,
+              order.publicationLongitude!,
+            )
+            : order.hasConsumerLocation
+            ? latlong.LatLng(order.consumerLatitude!, order.consumerLongitude!)
+            : const latlong.LatLng(-17.7833, -63.1821);
+    final resolvedDishLabel = order.dishTitle ?? dishLabel;
+    final resolvedCookLabel = order.cookBusinessName ?? cookLabel;
+    final resolvedConsumerLabel = order.consumerDisplayName ?? consumerLabel;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pedido en curso'),
@@ -29,14 +42,43 @@ class ActiveOrderScreen extends StatelessWidget {
         children: [
           Expanded(
             child: FlutterMap(
-              options: const MapOptions(
-                initialCenter: latlong.LatLng(-17.7833, -63.1821),
-                initialZoom: 14.0,
-              ),
+              options: MapOptions(initialCenter: center, initialZoom: 14.0),
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.cociname.app',
+                ),
+                MarkerLayer(
+                  markers: [
+                    if (order.hasConsumerLocation)
+                      Marker(
+                        point: latlong.LatLng(
+                          order.consumerLatitude!,
+                          order.consumerLongitude!,
+                        ),
+                        width: 48,
+                        height: 48,
+                        child: const Icon(
+                          Icons.person_pin_circle,
+                          color: Colors.blue,
+                          size: 36,
+                        ),
+                      ),
+                    if (order.hasPublicationLocation)
+                      Marker(
+                        point: latlong.LatLng(
+                          order.publicationLatitude!,
+                          order.publicationLongitude!,
+                        ),
+                        width: 48,
+                        height: 48,
+                        child: const Icon(
+                          Icons.restaurant,
+                          color: Colors.deepOrange,
+                          size: 34,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -58,7 +100,11 @@ class ActiveOrderScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.check_circle, color: Colors.green, size: 24),
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 24,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Pedido en curso',
@@ -69,12 +115,13 @@ class ActiveOrderScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _InfoRow(label: 'Plato', value: dishLabel),
+                _InfoRow(label: 'Plato', value: resolvedDishLabel),
                 _InfoRow(
                   label: 'Precio acordado',
                   value: 'Bs. ${order.agreedPrice.toStringAsFixed(2)}',
                 ),
-                _InfoRow(label: 'Cocinero', value: cookLabel),
+                _InfoRow(label: 'Cocinero', value: resolvedCookLabel),
+                _InfoRow(label: 'Consumidor', value: resolvedConsumerLabel),
                 const SizedBox(height: 16),
                 Row(
                   children: [
