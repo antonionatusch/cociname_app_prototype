@@ -105,7 +105,7 @@ begin
     v_consumer_profile_id,
     payload ->> 'query_text',
     (payload ->> 'target_price')::numeric,
-    coalesce((payload -> 'allergen_filters')::text[], '{}'::text[]),
+    public.jsonb_text_array(payload -> 'allergen_filters'),
     coalesce((payload ->> 'max_radius_km')::numeric, 4),
     coalesce((payload ->> 'current_radius_km')::numeric, 1),
     (payload ->> 'latitude')::double precision,

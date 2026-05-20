@@ -78,7 +78,11 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
                       point: vm.currentLatLng,
                       width: 40,
                       height: 40,
-                      child: const Icon(Icons.my_location, color: Colors.blue, size: 28),
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.blue,
+                        size: 28,
+                      ),
                     ),
                     ...vm.cooks.map(
                       (cook) => Marker(
@@ -99,7 +103,11 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
                                 ),
                               ],
                             ),
-                            child: const Icon(Icons.restaurant, color: Colors.white, size: 28),
+                            child: const Icon(
+                              Icons.restaurant,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                           ),
                         ),
                       ),
@@ -112,7 +120,8 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
           if (_showSearchPanel) _SearchPanel(vm: vm),
           _BottomPanel(
             vm: vm,
-            onSearch: () => setState(() => _showSearchPanel = !_showSearchPanel),
+            onSearch:
+                () => setState(() => _showSearchPanel = !_showSearchPanel),
           ),
           if (vm.isLoadingLocation)
             const Positioned(
@@ -133,53 +142,65 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
     );
   }
 
-  void _showCookInfo(BuildContext context, ConsumerMapHomeViewModel vm, String cookId) {
+  void _showCookInfo(
+    BuildContext context,
+    ConsumerMapHomeViewModel vm,
+    String cookId,
+  ) {
     vm.onCookTapped(cookId);
     final cookName = vm.getSelectedCookName() ?? 'Cocinero';
 
     showModalBottomSheet(
       context: context,
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      builder:
+          (sheetContext) => Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.restaurant, color: Colors.orange, size: 32),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        cookName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.restaurant,
+                      color: Colors.orange,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cookName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Text(
+                            'Disponible',
+                            style: TextStyle(color: Colors.green),
+                          ),
+                        ],
                       ),
-                      const Text('Disponible', style: TextStyle(color: Colors.green)),
-                    ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text('Platos activos: 3'),
+                const Text('Distancia aprox: 0.8 km'),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    child: const Text('Ver platos'),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            const Text('Platos activos: 3'),
-            const Text('Distancia aprox: 0.8 km'),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(sheetContext).pop(),
-                child: const Text('Ver platos'),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 }
@@ -201,7 +222,10 @@ class _TopBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               onTap: onSearchTap,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -243,6 +267,7 @@ class _SearchPanelState extends State<_SearchPanel> {
   final _budgetController = TextEditingController();
   final _radiusController = TextEditingController(text: '4');
   bool _isCreating = false;
+  String? _validationError;
 
   @override
   void dispose() {
@@ -274,7 +299,9 @@ class _SearchPanelState extends State<_SearchPanel> {
                   return Container(
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
                     ),
                     child: ListView(
                       controller: scrollController,
@@ -313,7 +340,9 @@ class _SearchPanelState extends State<_SearchPanel> {
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.monetization_on),
                           ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
@@ -334,10 +363,22 @@ class _SearchPanelState extends State<_SearchPanel> {
                         Wrap(
                           spacing: 8,
                           children: [
-                            FilterChip(label: const Text('Sin gluten'), onSelected: (_) {}),
-                            FilterChip(label: const Text('Sin lácteos'), onSelected: (_) {}),
-                            FilterChip(label: const Text('Sin huevo'), onSelected: (_) {}),
-                            FilterChip(label: const Text('Sin maní'), onSelected: (_) {}),
+                            FilterChip(
+                              label: const Text('Sin gluten'),
+                              onSelected: (_) {},
+                            ),
+                            FilterChip(
+                              label: const Text('Sin lácteos'),
+                              onSelected: (_) {},
+                            ),
+                            FilterChip(
+                              label: const Text('Sin huevo'),
+                              onSelected: (_) {},
+                            ),
+                            FilterChip(
+                              label: const Text('Sin maní'),
+                              onSelected: (_) {},
+                            ),
                           ],
                         ),
                         if (_isCreating || widget.vm.isSearching)
@@ -349,21 +390,49 @@ class _SearchPanelState extends State<_SearchPanel> {
                                 const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(widget.vm.searchStatus),
                               ],
                             ),
                           ),
-                        if (widget.vm.searchStatus.isNotEmpty && !widget.vm.isSearching)
+                        if (widget.vm.searchStatus.isNotEmpty &&
+                            !widget.vm.isSearching)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             child: Row(
                               children: [
-                                const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(child: Text(widget.vm.searchStatus)),
+                              ],
+                            ),
+                          ),
+                        if (_validationError != null || widget.vm.error != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Colors.red,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _validationError ?? widget.vm.error!,
+                                    style: const TextStyle(color: Colors.red),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -393,12 +462,21 @@ class _SearchPanelState extends State<_SearchPanel> {
     final budgetText = _budgetController.text.trim();
     final radiusText = _radiusController.text.trim();
 
-    if (query.isEmpty) return;
+    if (query.isEmpty) {
+      setState(() => _validationError = 'Ingresa el plato que quieres buscar.');
+      return;
+    }
     final budget = double.tryParse(budgetText);
     final radius = double.tryParse(radiusText) ?? 4;
-    if (budget == null || budget <= 0) return;
+    if (budget == null || budget <= 0) {
+      setState(() => _validationError = 'Ingresa un presupuesto mayor a 0.');
+      return;
+    }
 
-    setState(() => _isCreating = true);
+    setState(() {
+      _validationError = null;
+      _isCreating = true;
+    });
 
     await widget.vm.createSearchRequest(
       query: query,
@@ -414,10 +492,7 @@ class _BottomPanel extends StatelessWidget {
   final ConsumerMapHomeViewModel vm;
   final VoidCallback onSearch;
 
-  const _BottomPanel({
-    required this.vm,
-    required this.onSearch,
-  });
+  const _BottomPanel({required this.vm, required this.onSearch});
 
   @override
   Widget build(BuildContext context) {
@@ -499,9 +574,9 @@ class _OffersList extends StatelessWidget {
       children: [
         Text(
           'Ofertas recibidas (${offers.length})',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         ConstrainedBox(
@@ -536,7 +611,10 @@ class _OffersList extends StatelessWidget {
                             if (offer.message.isNotEmpty)
                               Text(
                                 offer.message,
-                                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -572,10 +650,11 @@ class _OffersList extends StatelessWidget {
     if (order != null && context.mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => ActiveOrderScreen(
-            order: order,
-            dishLabel: 'Plato solicitado',
-          ),
+          builder:
+              (_) => ActiveOrderScreen(
+                order: order,
+                dishLabel: 'Plato solicitado',
+              ),
         ),
       );
     }
@@ -598,9 +677,9 @@ class _DefaultChips extends StatelessWidget {
             Expanded(
               child: Text(
                 'Cocineros cerca',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
             if (vm.showMarkers)
