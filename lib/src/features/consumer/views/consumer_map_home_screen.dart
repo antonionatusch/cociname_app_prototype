@@ -42,6 +42,7 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
   final _mapController = MapController();
   bool _showSearchPanel = false;
   String? _searchInitialQuery;
+  bool _openingActiveOrder = false;
 
   @override
   void dispose() {
@@ -56,6 +57,24 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
         vm.receivedOffers
             .where((offer) => offer.hasPublicationLocation)
             .toList();
+    final activeOrder = vm.activeOrder;
+
+    if (activeOrder != null && !_openingActiveOrder) {
+      _openingActiveOrder = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder:
+                (_) => ActiveOrderScreen(
+                  order: activeOrder,
+                  cancelledDestinationBuilder:
+                      (_) => const ConsumerMapHomeScreen(),
+                ),
+          ),
+        );
+      });
+    }
 
     return Scaffold(
       body: Stack(
@@ -690,13 +709,25 @@ class _OffersList extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (offer.cookBusinessName != null)
-                              Text(
-                                offer.cookBusinessName!,
-                                style: TextStyle(color: Colors.grey[700]),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.storefront,
+                                  size: 14,
+                                  color: Colors.orange[700],
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    offer.cookBusinessName ??
+                                        'Cocinero disponible',
+                                    style: TextStyle(color: Colors.grey[700]),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                             Text(
                               'Bs. ${offer.price.toStringAsFixed(2)}',
                               style: const TextStyle(
@@ -780,6 +811,8 @@ class _OffersList extends StatelessWidget {
               (_) => ActiveOrderScreen(
                 order: order,
                 dishLabel: 'Plato solicitado',
+                cancelledDestinationBuilder:
+                    (_) => const ConsumerMapHomeScreen(),
               ),
         ),
       );

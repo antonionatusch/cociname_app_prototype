@@ -234,15 +234,21 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
         ),
         body: Consumer<CookDashboardViewModel>(
           builder: (context, vm, _) {
-            if (vm.activeOrder != null && !_openingActiveOrder) {
+            final activeOrder = vm.activeOrder;
+            if (activeOrder != null && !_openingActiveOrder) {
+              _openingActiveOrder = true;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted || _openingActiveOrder || vm.activeOrder == null) {
-                  return;
-                }
-                _openingActiveOrder = true;
+                if (!mounted) return;
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (_) => ActiveOrderScreen(order: vm.activeOrder!),
+                    builder:
+                        (_) => ActiveOrderScreen(
+                          order: activeOrder,
+                          cancelledDestinationBuilder:
+                              (_) => CookDashboardScreen(
+                                sessionViewModel: widget.sessionViewModel,
+                              ),
+                        ),
                   ),
                 );
               });

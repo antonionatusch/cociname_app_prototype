@@ -51,6 +51,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   bool _showCookSheet = false;
   String? _selectedCookId;
   String? _error;
+  Order? _activeOrder;
 
   final List<ConsumerCookMarker> _cooks = [];
   List<ConsumerCookMarker> get cooks => List.unmodifiable(_cooks);
@@ -62,16 +63,44 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   bool get showCookSheet => _showCookSheet;
   String? get selectedCookId => _selectedCookId;
   String? get error => _error;
+  Order? get activeOrder => _activeOrder;
 
   latlong.LatLng get currentLatLng => latlong.LatLng(_latitude, _longitude);
 
   Future<void> init() async {
     await _getCurrentLocation();
+    await _restoreActiveSession();
     _loadDemoCooks();
     Future.delayed(const Duration(milliseconds: 1000), () {
       _showMarkers = true;
       notifyListeners();
     });
+  }
+
+  Future<void> _restoreActiveSession() async {
+    try {
+      _activeOrder = await orderRepository.fetchActiveOrder();
+      if (_activeOrder != null) {
+        notifyListeners();
+        return;
+      }
+
+      final activeRequests = await requestRepository.fetchActiveRequest();
+      if (activeRequests.isEmpty) return;
+
+      final request = activeRequests.first;
+      _activeRequestId = request.id;
+      _searchStatus =
+          request.status == 'matched'
+              ? 'Solicitud emparejada. Revisando pedido...'
+              : 'Solicitud activa. Esperando ofertas...';
+      _receivedOffers = await offerRepository.fetchOffersForRequest(request.id);
+      if (_receivedOffers.isNotEmpty) {
+        _searchStatus = '${_receivedOffers.length} oferta(s) recibida(s)';
+      }
+      _startOfferPolling();
+      notifyListeners();
+    } catch (_) {}
   }
 
   Future<void> _getCurrentLocation() async {
@@ -239,6 +268,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
       await orderRepository.acceptOffer(offerId);
       _offerPollTimer?.cancel();
       final order = await orderRepository.fetchActiveOrder();
+      _activeOrder = order;
       _activeRequestId = null;
       _receivedOffers = const [];
       return order;
