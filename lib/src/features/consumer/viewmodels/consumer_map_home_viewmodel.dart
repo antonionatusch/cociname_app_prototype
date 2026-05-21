@@ -72,6 +72,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
     await _getCurrentLocation();
     await _restoreActiveSession();
     await _loadAvailableCooks();
+    _startMarkerPolling();
     Future.delayed(const Duration(milliseconds: 1000), () {
       _showMarkers = true;
       notifyListeners();
@@ -140,6 +141,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
     } catch (_) {
       _cooks.clear();
     }
+    notifyListeners();
   }
 
   ConsumerCookMarker _cookMarkerFromAvailable(AvailableCookMarker marker) {
@@ -239,6 +241,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   bool get hasOffers => _receivedOffers.isNotEmpty;
 
   Timer? _offerPollTimer;
+  Timer? _markerPollTimer;
 
   void _startOfferPolling() {
     _offerPollTimer?.cancel();
@@ -246,6 +249,13 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
 
     _offerPollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _pollOffers();
+    });
+  }
+
+  void _startMarkerPolling() {
+    _markerPollTimer?.cancel();
+    _markerPollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _loadAvailableCooks();
     });
   }
 
@@ -271,6 +281,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
       _activeOrder = order;
       _activeRequestId = null;
       _receivedOffers = const [];
+      await _loadAvailableCooks();
       return order;
     } catch (e) {
       _error = 'Error al aceptar oferta: $e';
@@ -282,6 +293,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _offerPollTimer?.cancel();
+    _markerPollTimer?.cancel();
     super.dispose();
   }
 }
