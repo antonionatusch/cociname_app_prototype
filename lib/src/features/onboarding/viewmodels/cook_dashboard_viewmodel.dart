@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
@@ -188,6 +189,9 @@ class CookDashboardViewModel extends ChangeNotifier {
                           description: description,
                           price: price,
                           availableQuantity: availableQuantity,
+                          latitude: latitude,
+                          longitude: longitude,
+                          zoneLabel: zoneLabel,
                         )
                         : publication,
               )
@@ -199,6 +203,143 @@ class CookDashboardViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<DishPublication?> addPublicationPhoto({
+    required DishPublication publication,
+    required File imageFile,
+  }) async {
+    _error = null;
+    notifyListeners();
+
+    try {
+      final position = publication.photos.length + 1;
+      final storagePath = await publicationRepository.uploadPhoto(
+        imageFile,
+        position: position,
+      );
+      await publicationRepository.addPublicationPhoto(
+        publicationId: publication.id,
+        storagePath: storagePath,
+        position: position,
+      );
+      final updated = publication.copyWith(
+        photos: [
+          ...publication.photos,
+          DishPublicationPhoto(
+            storagePath: storagePath,
+            publicUrl: publicationRepository.photoPublicUrl(storagePath),
+            position: position,
+          ),
+        ],
+      );
+      _replacePublication(updated);
+      return updated;
+    } catch (_) {
+      _error = 'No se pudo agregar la foto.';
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<DishPublication?> deletePublicationPhoto({
+    required DishPublication publication,
+    required DishPublicationPhoto photo,
+  }) async {
+    if (publication.photos.length <= 1) {
+      _error = 'La publicación debe conservar al menos una foto.';
+      notifyListeners();
+      return null;
+    }
+
+    _error = null;
+    notifyListeners();
+
+    try {
+      await publicationRepository.deletePublicationPhoto(
+        publicationId: publication.id,
+        storagePath: photo.storagePath,
+      );
+      final updatedPhotos =
+          publication.photos
+              .where((item) => item.storagePath != photo.storagePath)
+              .toList()
+              .asMap()
+              .entries
+              .map(
+                (entry) => DishPublicationPhoto(
+                  id: entry.value.id,
+                  storagePath: entry.value.storagePath,
+                  publicUrl: entry.value.publicUrl,
+                  position: entry.key + 1,
+                ),
+              )
+              .toList();
+      final updated = publication.copyWith(photos: updatedPhotos);
+      _replacePublication(updated);
+      return updated;
+    } catch (_) {
+      _error = 'No se pudo eliminar la foto.';
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<DishPublication?> reorderPublicationPhotos({
+    required DishPublication publication,
+    required int oldIndex,
+    required int newIndex,
+  }) async {
+    if (oldIndex == newIndex ||
+        oldIndex < 0 ||
+        newIndex < 0 ||
+        oldIndex >= publication.photos.length ||
+        newIndex >= publication.photos.length) {
+      return publication;
+    }
+
+    final reordered = [...publication.photos];
+    final photo = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, photo);
+
+    _error = null;
+    notifyListeners();
+
+    try {
+      await publicationRepository.reorderPublicationPhotos(
+        publicationId: publication.id,
+        orderedStoragePaths: reordered.map((item) => item.storagePath).toList(),
+      );
+      final updated = publication.copyWith(
+        photos:
+            reordered
+                .asMap()
+                .entries
+                .map(
+                  (entry) => DishPublicationPhoto(
+                    id: entry.value.id,
+                    storagePath: entry.value.storagePath,
+                    publicUrl: entry.value.publicUrl,
+                    position: entry.key + 1,
+                  ),
+                )
+                .toList(),
+      );
+      _replacePublication(updated);
+      return updated;
+    } catch (_) {
+      _error = 'No se pudo reordenar la foto.';
+      notifyListeners();
+      return null;
+    }
+  }
+
+  void _replacePublication(DishPublication publication) {
+    _publications =
+        _publications
+            .map((item) => item.id == publication.id ? publication : item)
+            .toList();
+    notifyListeners();
   }
 
   Future<bool> deletePublication(DishPublication publication) async {

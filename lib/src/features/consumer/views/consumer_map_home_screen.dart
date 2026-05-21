@@ -336,6 +336,7 @@ class _SearchPanel extends StatefulWidget {
 
 class _SearchPanelState extends State<_SearchPanel> {
   final _queryController = TextEditingController();
+  final _quantityController = TextEditingController(text: '1');
   final _budgetController = TextEditingController();
   final _radiusController = TextEditingController(text: '4');
   bool _isCreating = false;
@@ -358,6 +359,7 @@ class _SearchPanelState extends State<_SearchPanel> {
   @override
   void dispose() {
     _queryController.dispose();
+    _quantityController.dispose();
     _budgetController.dispose();
     _radiusController.dispose();
     super.dispose();
@@ -382,6 +384,7 @@ class _SearchPanelState extends State<_SearchPanel> {
                 minChildSize: 0.4,
                 maxChildSize: 0.9,
                 builder: (context, scrollController) {
+                  final mediaQuery = MediaQuery.of(context);
                   return Container(
                     decoration: const BoxDecoration(
                       color: Colors.white,
@@ -391,7 +394,14 @@ class _SearchPanelState extends State<_SearchPanel> {
                     ),
                     child: ListView(
                       controller: scrollController,
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        20,
+                        20,
+                        20 +
+                            mediaQuery.viewInsets.bottom +
+                            mediaQuery.viewPadding.bottom,
+                      ),
                       children: [
                         Center(
                           child: Container(
@@ -422,13 +432,23 @@ class _SearchPanelState extends State<_SearchPanel> {
                         TextField(
                           controller: _budgetController,
                           decoration: const InputDecoration(
-                            labelText: 'Presupuesto (Bs.)',
+                            labelText: 'Presupuesto total (Bs.)',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.monetization_on),
                           ),
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _quantityController,
+                          decoration: const InputDecoration(
+                            labelText: 'Cantidad requerida',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.format_list_numbered),
+                          ),
+                          keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 12),
                         TextField(
@@ -546,6 +566,7 @@ class _SearchPanelState extends State<_SearchPanel> {
   Future<void> _createRequest() async {
     final query = _queryController.text.trim();
     final budgetText = _budgetController.text.trim();
+    final quantityText = _quantityController.text.trim();
     final radiusText = _radiusController.text.trim();
 
     if (query.isEmpty) {
@@ -553,9 +574,14 @@ class _SearchPanelState extends State<_SearchPanel> {
       return;
     }
     final budget = double.tryParse(budgetText);
+    final quantity = int.tryParse(quantityText);
     final radius = double.tryParse(radiusText) ?? 4;
     if (budget == null || budget <= 0) {
       setState(() => _validationError = 'Ingresa un presupuesto mayor a 0.');
+      return;
+    }
+    if (quantity == null || quantity <= 0) {
+      setState(() => _validationError = 'Ingresa una cantidad mayor a 0.');
       return;
     }
 
@@ -567,6 +593,7 @@ class _SearchPanelState extends State<_SearchPanel> {
     final requestId = await widget.vm.createSearchRequest(
       query: query,
       budget: budget,
+      requestedQuantity: quantity,
       maxRadius: radius,
     );
 
@@ -583,6 +610,7 @@ class _BottomPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = 16 + MediaQuery.of(context).viewPadding.bottom;
     return Positioned(
       bottom: 0,
       left: 0,
@@ -599,7 +627,7 @@ class _BottomPanel extends StatelessWidget {
             ),
           ],
         ),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -674,6 +702,7 @@ class _OffersList extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final offer = offers[index];
+              final coverUrl = offer.coverPhotoPublicUrl;
               return Card(
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -682,12 +711,11 @@ class _OffersList extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
-                        if (offer.dishPhotoPublicUrl != null &&
-                            offer.dishPhotoPublicUrl!.isNotEmpty) ...[
+                        if (coverUrl != null && coverUrl.isNotEmpty) ...[
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: Image.network(
-                              offer.dishPhotoPublicUrl!,
+                              coverUrl,
                               width: 56,
                               height: 56,
                               fit: BoxFit.cover,
@@ -734,7 +762,7 @@ class _OffersList extends StatelessWidget {
                                 ],
                               ),
                               Text(
-                                'Bs. ${offer.price.toStringAsFixed(2)}',
+                                'Total ofertado: Bs. ${offer.price.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -742,10 +770,15 @@ class _OffersList extends StatelessWidget {
                               ),
                               Wrap(
                                 spacing: 8,
+                                runSpacing: 4,
                                 children: [
+                                  Text(
+                                    'Cantidad: ${offer.requestedQuantity}',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
                                   if (offer.estimatedMinutes != null)
                                     Text(
-                                      '${offer.estimatedMinutes} min',
+                                      'Prep. ${offer.estimatedMinutes} min',
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
                                   if (offer.distanceKm != null)
@@ -753,9 +786,14 @@ class _OffersList extends StatelessWidget {
                                       '${offer.distanceKm!.toStringAsFixed(1)} km',
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
+                                  if (offer.dishRatingAverage != null)
+                                    Text(
+                                      'Plato ${offer.dishRatingAverage!.toStringAsFixed(1)} ★',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
                                   if (offer.cookRatingAverage != null)
                                     Text(
-                                      '${offer.cookRatingAverage!.toStringAsFixed(1)} ★',
+                                      'Cocinero ${offer.cookRatingAverage!.toStringAsFixed(1)} ★',
                                       style: TextStyle(color: Colors.grey[600]),
                                     ),
                                 ],

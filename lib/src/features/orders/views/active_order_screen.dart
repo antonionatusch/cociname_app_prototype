@@ -157,6 +157,7 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
     final resolvedCookLabel = order.cookBusinessName ?? widget.cookLabel;
     final resolvedConsumerLabel =
         order.consumerDisplayName ?? widget.consumerLabel;
+    final bottomPadding = 20 + MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
       appBar: AppBar(
@@ -209,7 +210,7 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -247,8 +248,13 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
                 ),
                 _InfoRow(
                   icon: Icons.payments,
-                  label: 'Precio acordado',
+                  label: 'Precio acordado total',
                   value: 'Bs. ${order.agreedPrice.toStringAsFixed(2)}',
+                ),
+                _InfoRow(
+                  icon: Icons.format_list_numbered,
+                  label: 'Cantidad',
+                  value: order.requestedQuantity.toString(),
                 ),
                 _InfoRow(
                   icon: Icons.storefront,

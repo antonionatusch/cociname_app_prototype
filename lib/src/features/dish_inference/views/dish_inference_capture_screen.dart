@@ -12,9 +12,10 @@ class DishInferenceCaptureScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => DishInferenceCaptureViewModel(
-        classifier: context.read<TfliteVisionClassifierService>(),
-      ),
+      create:
+          (_) => DishInferenceCaptureViewModel(
+            classifier: context.read<TfliteVisionClassifierService>(),
+          ),
       child: const _CaptureView(),
     );
   }
@@ -136,9 +137,10 @@ class _InferenceCard extends StatelessWidget {
                   Text(
                     vm.visionStatusText,
                     style: TextStyle(
-                      color: vm.inferenceResult!.status.name == 'recognized'
-                          ? AppTheme.success
-                          : AppTheme.warning,
+                      color:
+                          vm.inferenceResult!.status.name == 'recognized'
+                              ? AppTheme.success
+                              : AppTheme.warning,
                     ),
                   ),
                 ],
@@ -157,13 +159,17 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = 16 + MediaQuery.of(context).viewPadding.bottom;
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
       child: Row(
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: vm.isLoading ? null : () => vm.pickAndClassify(ImageSource.camera),
+              onPressed:
+                  vm.isLoading
+                      ? null
+                      : () => vm.pickAndClassify(ImageSource.camera),
               icon: const Icon(Icons.camera_alt),
               label: const Text('Tomar foto'),
             ),
@@ -171,7 +177,10 @@ class _ActionButtons extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: vm.isLoading ? null : () => vm.pickAndClassify(ImageSource.gallery),
+              onPressed:
+                  vm.isLoading
+                      ? null
+                      : () => vm.pickAndClassify(ImageSource.gallery),
               icon: const Icon(Icons.photo_library),
               label: const Text('Seleccionar'),
             ),

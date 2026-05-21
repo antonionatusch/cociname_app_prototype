@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/app_session_viewmodel.dart';
@@ -98,7 +101,7 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
 
     if (publishResult == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Plato publicado exitosamente')),
+        const SnackBar(content: Text('Plato publicado con éxito')),
       );
       await _viewModel?.load();
     }
@@ -109,42 +112,14 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
     CookDashboardViewModel vm,
     DishPublication publication,
   ) async {
-    final updated = await showDialog<DishPublication>(
-      context: context,
-      builder:
-          (dialogContext) => _EditPublicationDialog(
-            publication: publication,
-            onSave: ({
-              required title,
-              required description,
-              required price,
-              required availableQuantity,
-              latitude,
-              longitude,
-              zoneLabel,
-            }) async {
-              final success = await vm.updatePublication(
-                publicationId: publication.id,
-                title: title,
-                description: description,
-                price: price,
-                availableQuantity: availableQuantity,
-                latitude: latitude,
-                longitude: longitude,
-                zoneLabel: zoneLabel,
-              );
-              if (!success) return null;
-              return publication.copyWith(
-                title: title,
-                description: description,
-                price: price,
-                availableQuantity: availableQuantity,
-                latitude: latitude,
-                longitude: longitude,
-                zoneLabel: zoneLabel,
-              );
-            },
-          ),
+    final updated = await Navigator.of(context).push<DishPublication>(
+      MaterialPageRoute(
+        builder:
+            (_) => ChangeNotifierProvider.value(
+              value: vm,
+              child: _EditPublicationScreen(publication: publication),
+            ),
+      ),
     );
 
     if (updated != null && context.mounted) {
@@ -228,7 +203,7 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
             IconButton(
               onPressed: widget.sessionViewModel.signOut,
               icon: const Icon(Icons.logout_rounded),
-              tooltip: 'Cerrar sesion',
+              tooltip: 'Cerrar sesión',
             ),
           ],
         ),
@@ -257,7 +232,12 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
             return RefreshIndicator(
               onRefresh: vm.load,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  8,
+                  20,
+                  28 + MediaQuery.of(context).viewPadding.bottom,
+                ),
                 children: [
                   _AvailabilityHeader(
                     displayName: widget.sessionViewModel.displayName,
@@ -396,19 +376,20 @@ class _IncomingRequestCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _InfoChip(
-                  label: 'Bs. ${request.targetPrice.toStringAsFixed(0)}',
+                  label:
+                      'Presupuesto total: Bs. ${request.targetPrice.toStringAsFixed(0)}',
                 ),
-                const SizedBox(width: 8),
+                _InfoChip(label: 'Cantidad: ${request.requestedQuantity}'),
                 _InfoChip(
                   label: '${request.maxRadiusKm.toStringAsFixed(0)} km',
                 ),
-                if (request.allergenFilters.isNotEmpty) ...[
-                  const SizedBox(width: 8),
+                if (request.allergenFilters.isNotEmpty)
                   _InfoChip(label: request.allergenFilters.join(', ')),
-                ],
               ],
             ),
             const SizedBox(height: 10),
@@ -493,8 +474,8 @@ class _AvailabilityHeader extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     isAvailable
-                        ? 'Estas libre para recibir oportunidades.'
-                        : 'Estas ocupado; pausaremos nuevas oportunidades.',
+                        ? 'Estás libre para recibir oportunidades.'
+                        : 'Estás ocupado; pausaremos nuevas oportunidades.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -643,7 +624,9 @@ class _PublicationCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    Text('Cantidad: ${publication.availableQuantity}'),
+                    Text(
+                      'Cantidad disponible: ${publication.availableQuantity}',
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -699,6 +682,7 @@ class _DishPublicationDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = 20 + MediaQuery.of(context).viewPadding.bottom;
     return Scaffold(
       appBar: AppBar(
         title: Text(_publication.title),
@@ -731,7 +715,7 @@ class _DishPublicationDetailScreenState
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
         children: [
           SizedBox(
             height: 260,
@@ -776,13 +760,16 @@ class _DishPublicationDetailScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            'Bs ${_publication.price.toStringAsFixed(2)}',
+            'Bs ${_publication.price.toStringAsFixed(2)} por unidad',
             style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           Text(_publication.description),
           const SizedBox(height: 14),
           Text('Cantidad disponible: ${_publication.availableQuantity}'),
+          Text(
+            'Rating del plato: ${_publication.ratingAverage.toStringAsFixed(1)} ★ (${_publication.ratingCount})',
+          ),
           if (_publication.zoneLabel != null)
             Text('Zona: ${_publication.zoneLabel}'),
           const SizedBox(height: 22),
@@ -835,59 +822,50 @@ class _EmptyPublicationsCard extends StatelessWidget {
     return const Card(
       child: Padding(
         padding: EdgeInsets.all(18),
-        child: Text('Aun no tienes platos publicados.'),
+        child: Text('Aún no tienes platos publicados.'),
       ),
     );
   }
 }
 
-typedef _SavePublicationEdit =
-    Future<DishPublication?> Function({
-      required String title,
-      required String description,
-      required double price,
-      required int availableQuantity,
-      double? latitude,
-      double? longitude,
-      String? zoneLabel,
-    });
-
-class _EditPublicationDialog extends StatefulWidget {
-  const _EditPublicationDialog({
-    required this.publication,
-    required this.onSave,
-  });
+class _EditPublicationScreen extends StatefulWidget {
+  const _EditPublicationScreen({required this.publication});
 
   final DishPublication publication;
-  final _SavePublicationEdit onSave;
 
   @override
-  State<_EditPublicationDialog> createState() => _EditPublicationDialogState();
+  State<_EditPublicationScreen> createState() => _EditPublicationScreenState();
 }
 
-class _EditPublicationDialogState extends State<_EditPublicationDialog> {
+class _EditPublicationScreenState extends State<_EditPublicationScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
   late final TextEditingController _quantityController;
+  late DishPublication _publication;
   double? _latitude;
   double? _longitude;
   String? _zoneLabel;
   String? _error;
   bool _isSaving = false;
+  bool _isUpdatingPhoto = false;
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.publication.title);
+    _publication = widget.publication;
+    _latitude = _publication.latitude;
+    _longitude = _publication.longitude;
+    _zoneLabel = _publication.zoneLabel;
+    _titleController = TextEditingController(text: _publication.title);
     _descriptionController = TextEditingController(
-      text: widget.publication.description,
+      text: _publication.description,
     );
     _priceController = TextEditingController(
-      text: widget.publication.price.toStringAsFixed(2),
+      text: _publication.price.toStringAsFixed(2),
     );
     _quantityController = TextEditingController(
-      text: widget.publication.availableQuantity.toString(),
+      text: _publication.availableQuantity.toString(),
     );
   }
 
@@ -903,87 +881,206 @@ class _EditPublicationDialogState extends State<_EditPublicationDialog> {
   @override
   Widget build(BuildContext context) {
     final hasLocation = _latitude != null && _longitude != null;
+    final bottomPadding = 24 + MediaQuery.of(context).viewPadding.bottom;
 
-    return AlertDialog(
-      title: const Text('Modificar publicación'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Nombre del plato'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Descripción'),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _priceController,
-              decoration: const InputDecoration(labelText: 'Precio'),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+    return Scaffold(
+      appBar: AppBar(title: const Text('Modificar publicación')),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomPadding),
+        children: [
+          Text(
+            'La primera foto será la portada. Las demás aparecerán en el detalle que ve el consumidor.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 14),
+          _EditablePhotosSection(
+            publication: _publication,
+            isBusy: _isUpdatingPhoto || _isSaving,
+            onAddFromCamera: () => _addPhoto(ImageSource.camera),
+            onAddFromGallery: () => _addPhoto(ImageSource.gallery),
+            onDelete: _deletePhoto,
+            onMove: _movePhoto,
+          ),
+          const SizedBox(height: 22),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del plato',
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _quantityController,
-              decoration: const InputDecoration(labelText: 'Cantidad'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Icon(
-                  hasLocation ? Icons.location_on : Icons.location_searching,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.primary,
+              const SizedBox(height: 10),
+              TextField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Descripción'),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _priceController,
+                decoration: const InputDecoration(
+                  labelText: 'Precio unitario (Bs.)',
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    hasLocation
-                        ? _zoneLabel!
-                        : (widget.publication.zoneLabel ?? 'Sin ubicación'),
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _quantityController,
+                decoration: const InputDecoration(
+                  labelText: 'Cantidad disponible',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Icon(
+                    hasLocation ? Icons.location_on : Icons.location_searching,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
-                ),
-                TextButton(
-                  onPressed: _pickLocation,
-                  child: const Text('Cambiar'),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      hasLocation
+                          ? _zoneLabel!
+                          : (_publication.zoneLabel ?? 'Sin ubicación'),
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _pickLocation,
+                    child: const Text('Cambiar'),
+                  ),
+                ],
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!, style: const TextStyle(color: AppTheme.error)),
               ],
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: AppTheme.error)),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed:
+                          _isSaving ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _isSaving || _isUpdatingPhoto ? null : _save,
+                      child:
+                          _isSaving
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text('Guardar'),
+                    ),
+                  ),
+                ],
+              ),
             ],
-          ],
-        ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _isSaving ? null : _save,
-          child:
-              _isSaving
-                  ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                  : const Text('Guardar'),
-        ),
-      ],
     );
+  }
+
+  Future<void> _addPhoto(ImageSource source) async {
+    if (_publication.photos.length >= 3) {
+      setState(
+        () => _error = 'Solo puedes tener hasta 3 fotos por publicación.',
+      );
+      return;
+    }
+
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      _isUpdatingPhoto = true;
+      _error = null;
+    });
+
+    final updated = await context
+        .read<CookDashboardViewModel>()
+        .addPublicationPhoto(
+          publication: _publication,
+          imageFile: File(picked.path),
+        );
+
+    if (!mounted) return;
+    setState(() {
+      _isUpdatingPhoto = false;
+      if (updated != null) {
+        _publication = updated;
+      } else {
+        _error = context.read<CookDashboardViewModel>().error;
+      }
+    });
+  }
+
+  Future<void> _deletePhoto(DishPublicationPhoto photo) async {
+    setState(() {
+      _isUpdatingPhoto = true;
+      _error = null;
+    });
+
+    final updated = await context
+        .read<CookDashboardViewModel>()
+        .deletePublicationPhoto(publication: _publication, photo: photo);
+
+    if (!mounted) return;
+    setState(() {
+      _isUpdatingPhoto = false;
+      if (updated != null) {
+        _publication = updated;
+      } else {
+        _error = context.read<CookDashboardViewModel>().error;
+      }
+    });
+  }
+
+  Future<void> _movePhoto(int oldIndex, int newIndex) async {
+    setState(() {
+      _isUpdatingPhoto = true;
+      _error = null;
+    });
+
+    final updated = await context
+        .read<CookDashboardViewModel>()
+        .reorderPublicationPhotos(
+          publication: _publication,
+          oldIndex: oldIndex,
+          newIndex: newIndex,
+        );
+
+    if (!mounted) return;
+    setState(() {
+      _isUpdatingPhoto = false;
+      if (updated != null) {
+        _publication = updated;
+      } else {
+        _error = context.read<CookDashboardViewModel>().error;
+      }
+    });
   }
 
   Future<void> _pickLocation() async {
@@ -1023,7 +1120,29 @@ class _EditPublicationDialogState extends State<_EditPublicationDialog> {
       _isSaving = true;
     });
 
-    final updated = await widget.onSave(
+    final success = await context
+        .read<CookDashboardViewModel>()
+        .updatePublication(
+          publicationId: _publication.id,
+          title: title,
+          description: description,
+          price: price,
+          availableQuantity: quantity,
+          latitude: _latitude,
+          longitude: _longitude,
+          zoneLabel: _zoneLabel,
+        );
+
+    if (!mounted) return;
+    if (!success) {
+      setState(() {
+        _isSaving = false;
+        _error = 'No se pudo guardar la publicación';
+      });
+      return;
+    }
+
+    final updated = _publication.copyWith(
       title: title,
       description: description,
       price: price,
@@ -1033,16 +1152,169 @@ class _EditPublicationDialogState extends State<_EditPublicationDialog> {
       zoneLabel: _zoneLabel,
     );
 
-    if (!mounted) return;
-    if (updated == null) {
-      setState(() {
-        _isSaving = false;
-        _error = 'No se pudo guardar la publicación';
-      });
-      return;
-    }
-
     Navigator.of(context).pop(updated);
+  }
+}
+
+class _EditablePhotosSection extends StatelessWidget {
+  const _EditablePhotosSection({
+    required this.publication,
+    required this.isBusy,
+    required this.onAddFromCamera,
+    required this.onAddFromGallery,
+    required this.onDelete,
+    required this.onMove,
+  });
+
+  final DishPublication publication;
+  final bool isBusy;
+  final VoidCallback onAddFromCamera;
+  final VoidCallback onAddFromGallery;
+  final ValueChanged<DishPublicationPhoto> onDelete;
+  final void Function(int oldIndex, int newIndex) onMove;
+
+  @override
+  Widget build(BuildContext context) {
+    final canAdd = publication.photos.length < 3 && !isBusy;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Fotos de la publicación',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 220,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: publication.photos.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final photo = publication.photos[index];
+              return SizedBox(
+                width: 220,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.network(
+                          photo.publicUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (_, __, ___) => const ColoredBox(
+                                color: AppTheme.surfaceVariant,
+                                child: Icon(Icons.broken_image),
+                              ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 10,
+                      bottom: 10,
+                      child: _PhotoBadge(
+                        label: index == 0 ? 'Portada' : 'Foto ${index + 1}',
+                      ),
+                    ),
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Row(
+                        children: [
+                          IconButton.filledTonal(
+                            onPressed:
+                                isBusy || index == 0
+                                    ? null
+                                    : () => onMove(index, index - 1),
+                            icon: const Icon(Icons.chevron_left),
+                            tooltip: 'Mover a la izquierda',
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton.filledTonal(
+                            onPressed:
+                                isBusy || index == publication.photos.length - 1
+                                    ? null
+                                    : () => onMove(index, index + 1),
+                            icon: const Icon(Icons.chevron_right),
+                            tooltip: 'Mover a la derecha',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: IconButton.filled(
+                        onPressed:
+                            isBusy || publication.photos.length <= 1
+                                ? null
+                                : () => onDelete(photo),
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: 'Eliminar foto',
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: canAdd ? onAddFromCamera : null,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Tomar foto'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: canAdd ? onAddFromGallery : null,
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Seleccionar'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${publication.photos.length}/3 fotos',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+}
+
+class _PhotoBadge extends StatelessWidget {
+  const _PhotoBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
   }
 }
 

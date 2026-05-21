@@ -12,13 +12,14 @@ class OfferDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final bottomPadding = 28 + MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detalle de oferta')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomPadding),
         children: [
-          _HeroPhoto(offer: offer),
+          _PhotoCarousel(offer: offer),
           const SizedBox(height: 18),
           Text(
             offer.dishTitle ?? 'Oferta de plato',
@@ -48,22 +49,32 @@ class OfferDetailScreen extends StatelessWidget {
             children: [
               _MetricChip(
                 icon: Icons.payments,
-                label: 'Bs. ${offer.price.toStringAsFixed(2)}',
+                label: 'Total Bs. ${offer.price.toStringAsFixed(2)}',
+              ),
+              _MetricChip(
+                icon: Icons.format_list_numbered,
+                label: 'Cantidad ${offer.requestedQuantity}',
               ),
               if (offer.estimatedMinutes != null)
                 _MetricChip(
                   icon: Icons.timer_outlined,
-                  label: '${offer.estimatedMinutes} min',
+                  label: 'Preparación ${offer.estimatedMinutes} min',
                 ),
               if (offer.distanceKm != null)
                 _MetricChip(
                   icon: Icons.near_me_outlined,
                   label: '${offer.distanceKm!.toStringAsFixed(1)} km',
                 ),
-              if (offer.cookRatingAverage != null)
+              if (offer.dishRatingAverage != null)
                 _MetricChip(
                   icon: Icons.star,
-                  label: offer.cookRatingAverage!.toStringAsFixed(1),
+                  label: 'Plato ${offer.dishRatingAverage!.toStringAsFixed(1)}',
+                ),
+              if (offer.cookRatingAverage != null)
+                _MetricChip(
+                  icon: Icons.storefront,
+                  label:
+                      'Cocinero ${offer.cookRatingAverage!.toStringAsFixed(1)}',
                 ),
             ],
           ),
@@ -136,34 +147,107 @@ class OfferDetailScreen extends StatelessWidget {
   }
 }
 
-class _HeroPhoto extends StatelessWidget {
+class _PhotoCarousel extends StatefulWidget {
   final CookOffer offer;
 
-  const _HeroPhoto({required this.offer});
+  const _PhotoCarousel({required this.offer});
+
+  @override
+  State<_PhotoCarousel> createState() => _PhotoCarouselState();
+}
+
+class _PhotoCarouselState extends State<_PhotoCarousel> {
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = offer.dishPhotoPublicUrl;
+    final photos = widget.offer.dishPhotos;
+    final fallbackUrl = widget.offer.dishPhotoPublicUrl;
+
+    if (photos.isEmpty && (fallbackUrl == null || fallbackUrl.isEmpty)) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: SizedBox(
+          height: 220,
+          width: double.infinity,
+          child: ColoredBox(
+            color: Colors.orange[50]!,
+            child: const Icon(Icons.restaurant, size: 64),
+          ),
+        ),
+      );
+    }
+
+    final imageUrls =
+        photos.isNotEmpty
+            ? photos
+                .map((photo) => photo.publicUrl)
+                .where((url) => url.isNotEmpty)
+                .toList()
+            : [fallbackUrl!];
+
+    if (imageUrls.isEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: SizedBox(
+          height: 220,
+          width: double.infinity,
+          child: ColoredBox(
+            color: Colors.orange[50]!,
+            child: const Icon(Icons.restaurant, size: 64),
+          ),
+        ),
+      );
+    }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: SizedBox(
         height: 220,
         width: double.infinity,
-        child:
-            imageUrl == null || imageUrl.isEmpty
-                ? ColoredBox(
-                  color: Colors.orange[50]!,
-                  child: const Icon(Icons.restaurant, size: 64),
-                )
-                : Image.network(
-                  imageUrl,
+        child: Stack(
+          children: [
+            PageView.builder(
+              itemCount: imageUrls.length,
+              onPageChanged: (index) => setState(() => _currentIndex = index),
+              itemBuilder: (context, index) {
+                return Image.network(
+                  imageUrls[index],
                   fit: BoxFit.cover,
                   errorBuilder:
                       (_, __, ___) => ColoredBox(
                         color: Colors.orange[50]!,
                         child: const Icon(Icons.broken_image, size: 64),
                       ),
+                );
+              },
+            ),
+            if (imageUrls.length > 1)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    child: Text(
+                      '${_currentIndex + 1}/${imageUrls.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ),
+              ),
+          ],
+        ),
       ),
     );
   }

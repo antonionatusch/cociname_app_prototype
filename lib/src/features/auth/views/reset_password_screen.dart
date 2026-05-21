@@ -75,7 +75,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     if (text.isEmpty || !text.contains('@')) {
-                      return 'Ingresa un correo valido.';
+                      return 'Ingresa un correo válido.';
                     }
                     return null;
                   },
@@ -92,7 +92,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Volver al inicio de sesion'),
+                  child: const Text('Volver al inicio de sesión'),
                 ),
               ],
             ),

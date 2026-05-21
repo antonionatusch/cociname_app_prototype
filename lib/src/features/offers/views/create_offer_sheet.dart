@@ -24,8 +24,24 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
   final _priceController = TextEditingController();
   final _minutesController = TextEditingController();
   final _messageController = TextEditingController();
+  bool _priceWasEdited = false;
   bool _isSaving = false;
   String? _error;
+
+  DishPublication? get _selectedPublication {
+    final id = _selectedPublicationId;
+    if (id == null) return null;
+    for (final publication in widget.publications) {
+      if (publication.id == id) return publication;
+    }
+    return null;
+  }
+
+  double? get _referenceTotal {
+    final publication = _selectedPublication;
+    if (publication == null) return null;
+    return publication.price * widget.request.requestedQuantity;
+  }
 
   @override
   void dispose() {
@@ -37,114 +53,164 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final bottomPadding =
+        mediaQuery.viewInsets.bottom > 0
+            ? mediaQuery.viewInsets.bottom + 20
+            : mediaQuery.viewPadding.bottom + 20;
+    final selectedPublication = _selectedPublication;
+    final referenceTotal = _referenceTotal;
+    final hasInsufficientQuantity =
+        selectedPublication != null &&
+        selectedPublication.availableQuantity <
+            widget.request.requestedQuantity;
+
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Ofertar para: ${widget.request.queryText}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Presupuesto: Bs. ${widget.request.targetPrice.toStringAsFixed(0)}',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            decoration: const InputDecoration(
-              labelText: 'Publicación',
-              border: OutlineInputBorder(),
-            ),
-            items:
-                widget.publications
-                    .where((p) => p.isActive)
-                    .map(
-                      (p) => DropdownMenuItem(
-                        value: p.id,
-                        child: Text('${p.title} - Bs. ${p.price.toStringAsFixed(0)}'),
-                      ),
-                    )
-                    .toList(),
-            onChanged: (value) => setState(() => _selectedPublicationId = value),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _priceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Precio ofertado',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _minutesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Minutos',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Ofertar para: ${widget.request.queryText}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Cantidad solicitada: ${widget.request.requestedQuantity}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Presupuesto total: Bs. ${widget.request.targetPrice.toStringAsFixed(0)}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Publicación',
+                border: OutlineInputBorder(),
+              ),
+              items:
+                  widget.publications
+                      .where((p) => p.isActive)
+                      .map(
+                        (p) => DropdownMenuItem(
+                          value: p.id,
+                          child: Text(
+                            '${p.title} - Bs. ${p.price.toStringAsFixed(0)} por unidad',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
+              onChanged: _onPublicationChanged,
+            ),
+            if (selectedPublication != null) ...[
+              const SizedBox(height: 12),
+              _ReferencePriceCard(
+                unitPrice: selectedPublication.price,
+                requestedQuantity: widget.request.requestedQuantity,
+                referenceTotal: referenceTotal ?? 0,
+                availableQuantity: selectedPublication.availableQuantity,
+                hasInsufficientQuantity: hasInsufficientQuantity,
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _messageController,
-            decoration: const InputDecoration(
-              labelText: 'Mensaje (opcional)',
-              border: OutlineInputBorder(),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _priceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Precio total ofertado',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => _priceWasEdited = true,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _minutesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Tiempo de preparación (min)',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
             ),
-            maxLines: 2,
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: AppTheme.error)),
+            const SizedBox(height: 6),
+            Text(
+              'Este es el total de la oferta para ${widget.request.requestedQuantity} unidad(es). Puedes ajustarlo si harás descuento o necesitas cambiar el monto.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _messageController,
+              decoration: const InputDecoration(
+                labelText: 'Mensaje (opcional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!, style: const TextStyle(color: AppTheme.error)),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _isSaving ? null : _createOffer,
+                child:
+                    _isSaving
+                        ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Text('Enviar oferta'),
+              ),
+            ),
           ],
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _isSaving ? null : _createOffer,
-              child:
-                  _isSaving
-                      ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Text('Enviar oferta'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+  void _onPublicationChanged(String? value) {
+    setState(() {
+      _selectedPublicationId = value;
+      _applyReferenceTotal(force: !_priceWasEdited);
+    });
+  }
+
+  void _applyReferenceTotal({required bool force}) {
+    final referenceTotal = _referenceTotal;
+    if (referenceTotal == null) return;
+    if (force || _priceController.text.trim().isEmpty) {
+      _priceController.text = referenceTotal.toStringAsFixed(2);
+    }
   }
 
   Future<void> _createOffer() async {
@@ -153,10 +219,27 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
       return;
     }
 
+    final publication = _selectedPublication;
+    if (publication != null &&
+        publication.availableQuantity < widget.request.requestedQuantity) {
+      setState(
+        () =>
+            _error =
+                'Solo tienes ${publication.availableQuantity} disponible(s) para una solicitud de ${widget.request.requestedQuantity}.',
+      );
+      return;
+    }
+
     final priceText = _priceController.text.trim();
     final price = double.tryParse(priceText);
     if (price == null || price <= 0) {
       setState(() => _error = 'Ingresa un precio válido');
+      return;
+    }
+    final minutesText = _minutesController.text.trim();
+    final minutes = int.tryParse(minutesText);
+    if (minutesText.isNotEmpty && (minutes == null || minutes <= 0)) {
+      setState(() => _error = 'Ingresa un tiempo de preparación válido');
       return;
     }
 
@@ -171,7 +254,7 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
         requestId: widget.request.id,
         publicationId: _selectedPublicationId!,
         price: price,
-        estimatedMinutes: int.tryParse(_minutesController.text.trim()),
+        estimatedMinutes: minutes,
         message: _messageController.text.trim(),
       );
 
@@ -181,5 +264,66 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+}
+
+class _ReferencePriceCard extends StatelessWidget {
+  const _ReferencePriceCard({
+    required this.unitPrice,
+    required this.requestedQuantity,
+    required this.referenceTotal,
+    required this.availableQuantity,
+    required this.hasInsufficientQuantity,
+  });
+
+  final double unitPrice;
+  final int requestedQuantity;
+  final double referenceTotal;
+  final int availableQuantity;
+  final bool hasInsufficientQuantity;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: hasInsufficientQuantity ? Colors.red[50] : Colors.orange[50],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: hasInsufficientQuantity ? AppTheme.error : Colors.orange[200]!,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Referencia para tu oferta',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Precio unitario publicado: Bs. ${unitPrice.toStringAsFixed(2)}',
+            ),
+            Text('Cantidad solicitada: $requestedQuantity'),
+            Text('Total referencial: Bs. ${referenceTotal.toStringAsFixed(2)}'),
+            Text('Cantidad disponible: $availableQuantity'),
+            if (hasInsufficientQuantity) ...[
+              const SizedBox(height: 6),
+              const Text(
+                'No tienes suficiente cantidad disponible para esta solicitud.',
+                style: TextStyle(
+                  color: AppTheme.error,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

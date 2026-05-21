@@ -8,15 +8,15 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: AuthShell(
-          title: 'Titulo de prueba',
-          subtitle: 'Subtitulo de prueba',
+          title: 'Título de prueba',
+          subtitle: 'Subtítulo de prueba',
           child: Text('Contenido interno'),
         ),
       ),
     );
 
     expect(find.text('CocinaME'), findsOneWidget);
-    expect(find.text('Titulo de prueba'), findsOneWidget);
+    expect(find.text('Título de prueba'), findsOneWidget);
     expect(find.text('Contenido interno'), findsOneWidget);
   });
 }

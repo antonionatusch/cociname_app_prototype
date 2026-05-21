@@ -28,6 +28,7 @@ class _PublishDishView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<PublishDishViewModel>();
+    final bottomPadding = 24 + MediaQuery.of(context).viewPadding.bottom;
 
     if (vm.isPublished) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -56,7 +57,7 @@ class _PublishDishView extends StatelessWidget {
           if (vm.error != null) _ErrorBanner(message: vm.error!),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -82,7 +83,7 @@ class _PublishDishView extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _TextField(
-                          label: 'Precio',
+                          label: 'Precio unitario (Bs.)',
                           value: vm.priceText,
                           onChanged: vm.setPriceText,
                           keyboardType: const TextInputType.numberWithOptions(
@@ -93,7 +94,7 @@ class _PublishDishView extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: _TextField(
-                          label: 'Cantidad',
+                          label: 'Cantidad disponible',
                           value: vm.quantityText,
                           onChanged: vm.setQuantityText,
                           keyboardType: TextInputType.number,
@@ -210,7 +211,7 @@ class _ImagePickerSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '${vm.imageFiles.length}/3 fotos. La primera sera la portada del dashboard.',
+          '${vm.imageFiles.length}/3 fotos. La primera será la portada del dashboard.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
@@ -359,7 +360,9 @@ class _LocationSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      vm.hasLocation ? 'Ubicación lista' : 'Ubicación pendiente',
+                      vm.hasLocation
+                          ? 'Ubicación lista'
+                          : 'Ubicación pendiente',
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 2),
@@ -394,7 +397,10 @@ class _LocationSection extends StatelessWidget {
                     }
                   },
                   icon: const Icon(Icons.map, size: 18),
-                  label: const Text('Elegir en mapa', style: TextStyle(fontSize: 13)),
+                  label: const Text(
+                    'Elegir en mapa',
+                    style: TextStyle(fontSize: 13),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -411,7 +417,10 @@ class _LocationSection extends StatelessWidget {
                     }
                   },
                   icon: const Icon(Icons.search, size: 18),
-                  label: const Text('Buscar dirección', style: TextStyle(fontSize: 13)),
+                  label: const Text(
+                    'Buscar dirección',
+                    style: TextStyle(fontSize: 13),
+                  ),
                 ),
               ),
             ],

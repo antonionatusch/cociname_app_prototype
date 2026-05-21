@@ -58,7 +58,7 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Telefono verificado correctamente.')),
+      const SnackBar(content: Text('Teléfono verificado correctamente.')),
     );
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
@@ -69,7 +69,7 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(error ?? 'Codigo reenviado.')));
+    ).showSnackBar(SnackBar(content: Text(error ?? 'Código reenviado.')));
   }
 
   @override
@@ -86,7 +86,7 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
           subtitle:
               isEmail
                   ? 'Tu cuenta se activara cuando confirmes el enlace enviado al correo registrado.'
-                  : 'Ingresa el codigo OTP enviado a tu telefono para activar la cuenta.',
+                  : 'Ingresa el código OTP enviado a tu teléfono para activar la cuenta.',
           child:
               isEmail
                   ? Column(
@@ -104,7 +104,7 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Cuando ya hayas confirmado tu correo, vuelve e inicia sesion normalmente para continuar con el onboarding.',
+                        'Cuando ya hayas confirmado tu correo, vuelve e inicia sesión normalmente para continuar con el onboarding.',
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
@@ -137,12 +137,12 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
                           controller: _tokenController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'Codigo OTP',
+                            labelText: 'Código OTP',
                             hintText: '123456',
                           ),
                           validator: (value) {
                             if (value == null || value.trim().length != 6) {
-                              return 'Ingresa el codigo de 6 digitos.';
+                              return 'Ingresa el código de 6 dígitos.';
                             }
                             return null;
                           },
@@ -154,7 +154,7 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
                           child: Text(
                             _viewModel.submitting
                                 ? 'Verificando...'
-                                : 'Verificar telefono',
+                                : 'Verificar teléfono',
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -164,7 +164,7 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
                           child: Text(
                             _viewModel.resending
                                 ? 'Reenviando...'
-                                : 'Reenviar codigo',
+                                : 'Reenviar código',
                           ),
                         ),
                       ],

@@ -61,7 +61,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         final currentStep = _viewModel.currentStep;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Perfil gastronomico')),
+          appBar: AppBar(title: const Text('Perfil gastronómico')),
           body: SafeArea(
             child: Column(
               children: [
@@ -148,12 +148,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '¿Que perfil quieres activar primero?',
+          '¿Qué perfil quieres activar primero?',
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 8),
         Text(
-          'Puedes escoger consumidor, emprendedor o ambos. Si eliges ambos, primero responderas las 7 preguntas de consumidor y luego las 7 de emprendedor.',
+          'Puedes escoger consumidor, emprendedor o ambos. Si eliges ambos, primero responderás las 7 preguntas de consumidor y luego las 7 de emprendedor.',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
         const SizedBox(height: 20),
@@ -233,60 +233,57 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             textCapitalization: TextCapitalization.sentences,
             maxLines: 2,
           ),
-          OnboardingQuestionInputType.singleChoice => Column(
-            children:
-                question.options
-                    .map(
-                      (option) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(18),
-                          onTap:
-                              () => _viewModel.selectSingleChoice(
-                                question,
-                                option,
-                              ),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color:
-                                  _viewModel.singleChoiceValueFor(question) ==
-                                          option
-                                      ? AppTheme.brandSoft
-                                      : AppTheme.surface,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
+          OnboardingQuestionInputType.singleChoice => RadioGroup<String>(
+            groupValue: _viewModel.singleChoiceValueFor(question),
+            onChanged: (value) {
+              if (value == null) return;
+              _viewModel.selectSingleChoice(question, value);
+            },
+            child: Column(
+              children:
+                  question.options
+                      .map(
+                        (option) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap:
+                                () => _viewModel.selectSingleChoice(
+                                  question,
+                                  option,
+                                ),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
                                 color:
                                     _viewModel.singleChoiceValueFor(question) ==
                                             option
-                                        ? AppTheme.brandPrimary
-                                        : AppTheme.outlineVariant,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Radio<String>(
-                                  value: option,
-                                  groupValue: _viewModel.singleChoiceValueFor(
-                                    question,
-                                  ),
-                                  onChanged: (value) {
-                                    if (value == null) return;
-                                    _viewModel.selectSingleChoice(
-                                      question,
-                                      value,
-                                    );
-                                  },
+                                        ? AppTheme.brandSoft
+                                        : AppTheme.surface,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color:
+                                      _viewModel.singleChoiceValueFor(
+                                                question,
+                                              ) ==
+                                              option
+                                          ? AppTheme.brandPrimary
+                                          : AppTheme.outlineVariant,
                                 ),
-                                Expanded(child: Text(option)),
-                              ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Radio<String>(value: option),
+                                  Expanded(child: Text(option)),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+            ),
           ),
           OnboardingQuestionInputType.multiChoice => Wrap(
             spacing: 10,
@@ -321,7 +318,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'La logica de eleccion de suscripciones todavia esta en construccion. Por ahora, cualquier perfil de emprendedor iniciara con el plan Base.',
+          'La lógica de elección de suscripciones todavía está en construcción. Por ahora, cualquier perfil de emprendedor iniciará con el plan Base.',
         ),
         const SizedBox(height: 20),
         Container(

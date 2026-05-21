@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/available_cook_marker.dart';
 import '../models/consumer_request.dart';
 
 class ConsumerRequestRepository {
@@ -11,6 +12,7 @@ class ConsumerRequestRepository {
   Future<String> createRequest({
     required String queryText,
     required double targetPrice,
+    required int requestedQuantity,
     required List<String> allergenFilters,
     required double maxRadiusKm,
     required double currentRadiusKm,
@@ -20,6 +22,7 @@ class ConsumerRequestRepository {
     final payload = {
       'query_text': queryText,
       'target_price': targetPrice,
+      'requested_quantity': requestedQuantity,
       'allergen_filters': allergenFilters,
       'max_radius_km': maxRadiusKm,
       'current_radius_km': currentRadiusKm,
@@ -33,6 +36,18 @@ class ConsumerRequestRepository {
     );
 
     return result as String;
+  }
+
+  Future<List<AvailableCookMarker>> fetchAvailableCookMarkers() async {
+    final response = await _client.rpc('get_available_cook_markers');
+    return (response as List<dynamic>)
+        .map(
+          (item) => AvailableCookMarker.fromMap(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .where((item) => item.latitude != 0 && item.longitude != 0)
+        .toList();
   }
 
   Future<List<ConsumerRequest>> fetchActiveRequest() async {

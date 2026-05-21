@@ -6,6 +6,7 @@ class Order {
   final String cookProfileId;
   final String publicationId;
   final double agreedPrice;
+  final int requestedQuantity;
   final String status;
   final DateTime createdAt;
   final String? dishTitle;
@@ -26,6 +27,7 @@ class Order {
     required this.cookProfileId,
     required this.publicationId,
     required this.agreedPrice,
+    this.requestedQuantity = 1,
     this.status = 'active',
     required this.createdAt,
     this.dishTitle,
@@ -54,6 +56,7 @@ class Order {
       cookProfileId: map['cook_profile_id'] as String? ?? '',
       publicationId: map['publication_id'] as String? ?? '',
       agreedPrice: (map['agreed_price'] as num?)?.toDouble() ?? 0,
+      requestedQuantity: (map['requested_quantity'] as num?)?.toInt() ?? 1,
       status: map['status'] as String? ?? 'active',
       createdAt:
           DateTime.tryParse(map['created_at'] as String? ?? '') ??

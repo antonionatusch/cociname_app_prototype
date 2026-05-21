@@ -48,7 +48,7 @@ class OnboardingViewModel extends ChangeNotifier {
     OnboardingQuestionDefinition(
       id: 'consumer.preferred_food_types',
       role: ProfileRole.consumer,
-      title: '¿Que tipos de comida sueles pedir?',
+      title: '¿Qué tipos de comida sueles pedir?',
       subtitle: 'Puedes seleccionar varias opciones.',
       inputType: OnboardingQuestionInputType.multiChoice,
       questionNumber: 2,
@@ -67,7 +67,7 @@ class OnboardingViewModel extends ChangeNotifier {
       role: ProfileRole.consumer,
       title: '¿Con que frecuencia usas apps de comida?',
       subtitle:
-          'Esto ayudara a priorizar recomendaciones y recordatorios futuros.',
+          'Esto ayudará a priorizar recomendaciones y recordatorios futuros.',
       inputType: OnboardingQuestionInputType.singleChoice,
       questionNumber: 3,
       totalQuestions: 7,
@@ -98,9 +98,9 @@ class OnboardingViewModel extends ChangeNotifier {
     OnboardingQuestionDefinition(
       id: 'consumer.allergen_filters',
       role: ProfileRole.consumer,
-      title: '¿Que alergenos o restricciones quieres filtrar?',
+      title: '¿Qué alérgenos o restricciones quieres filtrar?',
       subtitle:
-          'Esta informacion se usara como preferencia preventiva, no como criterio medico.',
+          'Esta información se usará como preferencia preventiva, no como criterio médico.',
       inputType: OnboardingQuestionInputType.multiChoice,
       questionNumber: 5,
       totalQuestions: 7,
@@ -116,8 +116,8 @@ class OnboardingViewModel extends ChangeNotifier {
     OnboardingQuestionDefinition(
       id: 'consumer.delivery_preferences',
       role: ProfileRole.consumer,
-      title: '¿Como prefieres recibir tu pedido?',
-      subtitle: 'Esto nos ayudara a priorizar tipos de oferta.',
+      title: '¿Cómo prefieres recibir tu pedido?',
+      subtitle: 'Esto nos ayudará a priorizar tipos de oferta.',
       inputType: OnboardingQuestionInputType.multiChoice,
       questionNumber: 6,
       totalQuestions: 7,
@@ -125,13 +125,13 @@ class OnboardingViewModel extends ChangeNotifier {
         'Cliente recoge el pedido',
         'Entrega personal del cocinero',
         'Delivery tercerizado',
-        'Me adapto segun el caso',
+        'Me adapto según el caso',
       ],
     ),
     OnboardingQuestionDefinition(
       id: 'consumer.payment_preferences',
       role: ProfileRole.consumer,
-      title: '¿Que medios de pago prefieres usar?',
+      title: '¿Qué medios de pago prefieres usar?',
       subtitle:
           'Aunque el MVP no procesa pagos dentro de la app, esto alimenta tu perfil inicial.',
       inputType: OnboardingQuestionInputType.multiChoice,
@@ -145,7 +145,7 @@ class OnboardingViewModel extends ChangeNotifier {
     OnboardingQuestionDefinition(
       id: 'cook.business_name',
       role: ProfileRole.cook,
-      title: '¿Como se llama tu emprendimiento o perfil visible?',
+      title: '¿Cómo se llama tu emprendimiento o perfil visible?',
       subtitle:
           'Puede ser tu marca, tu nombre o una referencia comercial breve.',
       inputType: OnboardingQuestionInputType.text,
@@ -156,7 +156,7 @@ class OnboardingViewModel extends ChangeNotifier {
     OnboardingQuestionDefinition(
       id: 'cook.dish_types',
       role: ProfileRole.cook,
-      title: '¿Que tipos de platos cocinas para vender?',
+      title: '¿Qué tipos de platos cocinas para vender?',
       subtitle: 'Selecciona las categorias que mejor describen tu oferta.',
       inputType: OnboardingQuestionInputType.multiChoice,
       questionNumber: 2,
@@ -203,7 +203,7 @@ class OnboardingViewModel extends ChangeNotifier {
     OnboardingQuestionDefinition(
       id: 'cook.delivery_methods',
       role: ProfileRole.cook,
-      title: '¿Como gestionas la entrega de tus pedidos?',
+      title: '¿Cómo gestionas la entrega de tus pedidos?',
       subtitle: 'Selecciona todas las modalidades que ya utilizas.',
       inputType: OnboardingQuestionInputType.multiChoice,
       questionNumber: 5,
@@ -218,9 +218,9 @@ class OnboardingViewModel extends ChangeNotifier {
     OnboardingQuestionDefinition(
       id: 'cook.main_pain_points',
       role: ProfileRole.cook,
-      title: '¿Que te cuesta mas al vender comida?',
+      title: '¿Qué te cuesta más al vender comida?',
       subtitle:
-          'Esto nos ayudara a enriquecer funciones futuras del lado del emprendedor.',
+          'Esto nos ayudará a enriquecer funciones futuras del lado del emprendedor.',
       inputType: OnboardingQuestionInputType.multiChoice,
       questionNumber: 6,
       totalQuestions: 7,
@@ -235,7 +235,7 @@ class OnboardingViewModel extends ChangeNotifier {
       id: 'cook.operating_zone',
       role: ProfileRole.cook,
       title: '¿Desde que zona operas normalmente?',
-      subtitle: 'Esta referencia nos ayudara a ubicar tu oferta en la app.',
+      subtitle: 'Esta referencia nos ayudará a ubicar tu oferta en la app.',
       inputType: OnboardingQuestionInputType.text,
       questionNumber: 7,
       totalQuestions: 7,

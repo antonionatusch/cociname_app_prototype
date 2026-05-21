@@ -143,8 +143,8 @@ class AuthRepository {
 
     throw IdentifierAlreadyTakenException(
       method == VerificationMethod.email
-          ? 'Este correo ya esta registrado.'
-          : 'Este telefono ya esta registrado.',
+          ? 'Este correo ya está registrado.'
+          : 'Este teléfono ya está registrado.',
     );
   }
 }

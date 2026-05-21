@@ -1,10 +1,12 @@
 class DishPublicationPhoto {
   const DishPublicationPhoto({
+    this.id,
     required this.storagePath,
     required this.publicUrl,
     required this.position,
   });
 
+  final String? id;
   final String storagePath;
   final String publicUrl;
   final int position;
@@ -15,9 +17,10 @@ class DishPublicationPhoto {
   ) {
     final storagePath = map['storage_path'] as String? ?? '';
     return DishPublicationPhoto(
+      id: map['id'] as String?,
       storagePath: storagePath,
       publicUrl: map['public_url'] as String? ?? publicUrlBuilder(storagePath),
-      position: map['position'] as int? ?? 1,
+      position: (map['position'] as num?)?.toInt() ?? 1,
     );
   }
 }
@@ -33,6 +36,8 @@ class DishPublication {
     this.latitude,
     this.longitude,
     this.zoneLabel,
+    this.ratingAverage = 5.0,
+    this.ratingCount = 0,
     required this.photos,
   });
 
@@ -45,6 +50,8 @@ class DishPublication {
   final double? latitude;
   final double? longitude;
   final String? zoneLabel;
+  final double ratingAverage;
+  final int ratingCount;
   final List<DishPublicationPhoto> photos;
 
   DishPublicationPhoto? get coverPhoto => photos.isEmpty ? null : photos.first;
@@ -78,6 +85,8 @@ class DishPublication {
       latitude: latRaw is num ? latRaw.toDouble() : null,
       longitude: lngRaw is num ? lngRaw.toDouble() : null,
       zoneLabel: map['zone_label'] as String?,
+      ratingAverage: (map['rating_average'] as num?)?.toDouble() ?? 5.0,
+      ratingCount: (map['rating_count'] as num?)?.toInt() ?? 0,
       photos: rawPhotos,
     );
   }
@@ -91,6 +100,9 @@ class DishPublication {
     double? latitude,
     double? longitude,
     String? zoneLabel,
+    double? ratingAverage,
+    int? ratingCount,
+    List<DishPublicationPhoto>? photos,
   }) {
     return DishPublication(
       id: id,
@@ -102,7 +114,9 @@ class DishPublication {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       zoneLabel: zoneLabel ?? this.zoneLabel,
-      photos: photos,
+      ratingAverage: ratingAverage ?? this.ratingAverage,
+      ratingCount: ratingCount ?? this.ratingCount,
+      photos: photos ?? this.photos,
     );
   }
 }

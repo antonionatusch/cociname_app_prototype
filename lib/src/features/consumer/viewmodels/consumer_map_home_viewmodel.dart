@@ -9,6 +9,7 @@ import '../../offers/models/cook_offer.dart';
 import '../../offers/repositories/offer_repository.dart';
 import '../../orders/models/order.dart';
 import '../../orders/repositories/order_repository.dart';
+import '../models/available_cook_marker.dart';
 import '../repositories/consumer_request_repository.dart';
 
 class ConsumerCookMarker {
@@ -70,7 +71,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   Future<void> init() async {
     await _getCurrentLocation();
     await _restoreActiveSession();
-    _loadDemoCooks();
+    await _loadAvailableCooks();
     Future.delayed(const Duration(milliseconds: 1000), () {
       _showMarkers = true;
       notifyListeners();
@@ -130,27 +131,24 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _loadDemoCooks() {
-    _cooks.addAll([
-      ConsumerCookMarker(
-        id: 'cook-1',
-        name: 'Doña Maria',
-        latitude: _latitude + 0.005,
-        longitude: _longitude - 0.008,
-      ),
-      ConsumerCookMarker(
-        id: 'cook-2',
-        name: 'Don José',
-        latitude: _latitude - 0.003,
-        longitude: _longitude + 0.01,
-      ),
-      ConsumerCookMarker(
-        id: 'cook-3',
-        name: 'Cocina Doña Ana',
-        latitude: _latitude + 0.008,
-        longitude: _longitude + 0.004,
-      ),
-    ]);
+  Future<void> _loadAvailableCooks() async {
+    try {
+      final markers = await requestRepository.fetchAvailableCookMarkers();
+      _cooks
+        ..clear()
+        ..addAll(markers.map(_cookMarkerFromAvailable));
+    } catch (_) {
+      _cooks.clear();
+    }
+  }
+
+  ConsumerCookMarker _cookMarkerFromAvailable(AvailableCookMarker marker) {
+    return ConsumerCookMarker(
+      id: marker.id,
+      name: marker.name,
+      latitude: marker.latitude,
+      longitude: marker.longitude,
+    );
   }
 
   void onCookTapped(String cookId) {
@@ -183,6 +181,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   Future<String?> createSearchRequest({
     required String query,
     required double budget,
+    required int requestedQuantity,
     required double maxRadius,
     List<String> allergenFilters = const [],
   }) async {
@@ -195,6 +194,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
       final requestId = await requestRepository.createRequest(
         queryText: query,
         targetPrice: budget,
+        requestedQuantity: requestedQuantity,
         allergenFilters: allergenFilters,
         maxRadiusKm: maxRadius,
         currentRadiusKm: 1,
@@ -227,7 +227,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
         _error = null;
         notifyListeners();
       } catch (e) {
-        _error = 'No se pudo cancelar la busqueda: $e';
+        _error = 'No se pudo cancelar la búsqueda: $e';
         notifyListeners();
       }
     }

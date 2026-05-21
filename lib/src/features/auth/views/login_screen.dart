@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return AuthShell(
           title: 'Entrar a CocinaME',
           subtitle:
-              'Accede con tu correo o telefono para seguir con tus publicaciones, pedidos y perfil gastronomico.',
+              'Accede con tu correo o teléfono para seguir con tus publicaciones, pedidos y perfil gastronómico.',
           child: Form(
             key: _formKey,
             child: Column(
@@ -65,12 +65,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _identifierController,
                   decoration: const InputDecoration(
-                    labelText: 'Correo o telefono',
+                    labelText: 'Correo o teléfono',
                     hintText: 'ejemplo@correo.com o +59170000001',
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Ingresa tu correo o telefono.';
+                      return 'Ingresa tu correo o teléfono.';
                     }
                     return null;
                   },
@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ElevatedButton(
                   onPressed: _viewModel.submitting ? null : _submit,
                   child: Text(
-                    _viewModel.submitting ? 'Ingresando...' : 'Iniciar sesion',
+                    _viewModel.submitting ? 'Ingresando...' : 'Iniciar sesión',
                   ),
                 ),
                 const SizedBox(height: 16),

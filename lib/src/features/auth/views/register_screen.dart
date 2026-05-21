@@ -110,7 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return AuthShell(
           title: 'Crea tu cuenta',
           subtitle:
-              'Empieza con correo o telefono y luego completa tu perfil gastronomico segun el rol que elijas.',
+              'Empieza con correo o teléfono y luego completa tu perfil gastronómico según el rol que elijas.',
           child: Form(
             key: _formKey,
             child: Column(
@@ -125,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     ButtonSegment(
                       value: VerificationMethod.phone,
-                      label: Text('Telefono'),
+                      label: Text('Teléfono'),
                       icon: Icon(Icons.sms_rounded),
                     ),
                   ],
@@ -167,7 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ? TextInputType.emailAddress
                           : TextInputType.phone,
                   decoration: InputDecoration(
-                    labelText: isEmail ? 'Correo' : 'Telefono',
+                    labelText: isEmail ? 'Correo' : 'Teléfono',
                     hintText: isEmail ? 'nombre@correo.com' : '+59170000001',
                   ),
                   validator: (value) {
@@ -175,10 +175,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (text.isEmpty) {
                       return isEmail
                           ? 'Ingresa tu correo.'
-                          : 'Ingresa tu telefono.';
+                          : 'Ingresa tu teléfono.';
                     }
                     if (isEmail && !text.contains('@')) {
-                      return 'Ingresa un correo valido.';
+                      return 'Ingresa un correo válido.';
                     }
                     if (!isEmail && !text.startsWith('+')) {
                       return 'Usa formato internacional, por ejemplo +59170000001.';

@@ -62,12 +62,33 @@ class OfferAllergenWarning {
   }
 }
 
+class OfferDishPhoto {
+  const OfferDishPhoto({
+    required this.storagePath,
+    required this.publicUrl,
+    required this.position,
+  });
+
+  final String storagePath;
+  final String publicUrl;
+  final int position;
+
+  factory OfferDishPhoto.fromMap(Map<String, dynamic> map) {
+    return OfferDishPhoto(
+      storagePath: map['storage_path'] as String? ?? '',
+      publicUrl: map['public_url'] as String? ?? '',
+      position: (map['position'] as num?)?.toInt() ?? 1,
+    );
+  }
+}
+
 class CookOffer {
   final String id;
   final String requestId;
   final String publicationId;
   final String cookProfileId;
   final double price;
+  final int requestedQuantity;
   final int? estimatedMinutes;
   final String message;
   final String status;
@@ -76,8 +97,11 @@ class CookOffer {
   final String? dishDescription;
   final String? dishPhotoStoragePath;
   final String? dishPhotoPublicUrl;
+  final List<OfferDishPhoto> dishPhotos;
   final String? cookBusinessName;
   final double? cookRatingAverage;
+  final double? dishRatingAverage;
+  final int dishRatingCount;
   final double? publicationLatitude;
   final double? publicationLongitude;
   final String? publicationZoneLabel;
@@ -92,6 +116,7 @@ class CookOffer {
     required this.publicationId,
     required this.cookProfileId,
     required this.price,
+    this.requestedQuantity = 1,
     this.estimatedMinutes,
     this.message = '',
     this.status = 'pending',
@@ -100,8 +125,11 @@ class CookOffer {
     this.dishDescription,
     this.dishPhotoStoragePath,
     this.dishPhotoPublicUrl,
+    this.dishPhotos = const [],
     this.cookBusinessName,
     this.cookRatingAverage,
+    this.dishRatingAverage,
+    this.dishRatingCount = 0,
     this.publicationLatitude,
     this.publicationLongitude,
     this.publicationZoneLabel,
@@ -113,6 +141,14 @@ class CookOffer {
 
   bool get hasPublicationLocation =>
       publicationLatitude != null && publicationLongitude != null;
+
+  OfferDishPhoto? get coverPhoto =>
+      dishPhotos.isEmpty ? null : dishPhotos.first;
+
+  String? get coverPhotoPublicUrl =>
+      coverPhoto?.publicUrl.isNotEmpty == true
+          ? coverPhoto!.publicUrl
+          : dishPhotoPublicUrl;
 
   List<OfferAllergenWarning> get containsWarnings =>
       allergenWarnings
@@ -139,6 +175,18 @@ class CookOffer {
             )
             .toList() ??
         const <OfferAllergenWarning>[];
+    final photos =
+        (map['dish_photos'] as List<dynamic>?)
+            ?.whereType<Map>()
+            .map(
+              (item) => OfferDishPhoto.fromMap(Map<String, dynamic>.from(item)),
+            )
+            .where(
+              (item) =>
+                  item.publicUrl.isNotEmpty || item.storagePath.isNotEmpty,
+            )
+            .toList() ??
+        const <OfferDishPhoto>[];
 
     return CookOffer(
       id: map['id'] as String? ?? '',
@@ -146,7 +194,8 @@ class CookOffer {
       publicationId: map['publication_id'] as String? ?? '',
       cookProfileId: map['cook_profile_id'] as String? ?? '',
       price: (map['price'] as num?)?.toDouble() ?? 0,
-      estimatedMinutes: map['estimated_minutes'] as int?,
+      requestedQuantity: (map['requested_quantity'] as num?)?.toInt() ?? 1,
+      estimatedMinutes: (map['estimated_minutes'] as num?)?.toInt(),
       message: map['message'] as String? ?? '',
       status: map['status'] as String? ?? 'pending',
       createdAt:
@@ -156,8 +205,11 @@ class CookOffer {
       dishDescription: map['dish_description'] as String?,
       dishPhotoStoragePath: map['dish_photo_storage_path'] as String?,
       dishPhotoPublicUrl: map['dish_photo_public_url'] as String?,
+      dishPhotos: photos,
       cookBusinessName: map['cook_business_name'] as String?,
       cookRatingAverage: (map['cook_rating_average'] as num?)?.toDouble(),
+      dishRatingAverage: (map['dish_rating_average'] as num?)?.toDouble(),
+      dishRatingCount: (map['dish_rating_count'] as num?)?.toInt() ?? 0,
       publicationLatitude: (map['publication_latitude'] as num?)?.toDouble(),
       publicationLongitude: (map['publication_longitude'] as num?)?.toDouble(),
       publicationZoneLabel: map['publication_zone_label'] as String?,

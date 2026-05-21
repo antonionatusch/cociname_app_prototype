@@ -26,7 +26,7 @@ extension ProfileRoleX on ProfileRole {
   String get shortDescription {
     switch (this) {
       case ProfileRole.consumer:
-        return 'Explora platos y filtra segun tus gustos.';
+        return 'Explora platos y filtra según tus gustos.';
       case ProfileRole.cook:
         return 'Publica comida casera y administra tu oferta.';
       case ProfileRole.admin:

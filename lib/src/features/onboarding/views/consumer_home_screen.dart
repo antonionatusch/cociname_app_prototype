@@ -63,7 +63,7 @@ class _ConsumerHomeScreenState extends State<ConsumerHomeScreen> {
           IconButton(
             onPressed: widget.sessionViewModel.signOut,
             icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Cerrar sesion',
+            tooltip: 'Cerrar sesión',
           ),
         ],
       ),

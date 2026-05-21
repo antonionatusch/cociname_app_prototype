@@ -25,6 +25,10 @@ class DishPublicationRepository {
     return path;
   }
 
+  String photoPublicUrl(String storagePath) {
+    return _client.storage.from('dish-photos').getPublicUrl(storagePath);
+  }
+
   Future<String> createPublication({
     required String title,
     required String description,
@@ -85,7 +89,7 @@ class DishPublicationRepository {
     final response = await _client
         .from('dish_publications')
         .select(
-          'id, title, description, price, available_quantity, is_active, latitude, longitude, zone_label, created_at, dish_photos(storage_path, public_url, position)',
+          'id, title, description, price, available_quantity, is_active, latitude, longitude, zone_label, rating_average, rating_count, created_at, dish_photos(id, storage_path, public_url, position)',
         )
         .order('created_at', ascending: false);
 
@@ -93,10 +97,56 @@ class DishPublicationRepository {
         .map(
           (item) => DishPublication.fromMap(
             item as Map<String, dynamic>,
-            (path) => _client.storage.from('dish-photos').getPublicUrl(path),
+            photoPublicUrl,
           ),
         )
         .toList();
+  }
+
+  Future<void> addPublicationPhoto({
+    required String publicationId,
+    required String storagePath,
+    required int position,
+  }) async {
+    await _client.rpc(
+      'add_dish_publication_photo',
+      params: {
+        'p_publication_id': publicationId,
+        'p_storage_path': storagePath,
+        'p_position': position,
+      },
+    );
+  }
+
+  Future<void> deletePublicationPhoto({
+    required String publicationId,
+    required String storagePath,
+  }) async {
+    final deletedPath = await _client.rpc(
+      'delete_dish_publication_photo',
+      params: {
+        'p_publication_id': publicationId,
+        'p_storage_path': storagePath,
+      },
+    );
+
+    final path = deletedPath?.toString() ?? storagePath;
+    if (path.isNotEmpty) {
+      await _client.storage.from('dish-photos').remove([path]);
+    }
+  }
+
+  Future<void> reorderPublicationPhotos({
+    required String publicationId,
+    required List<String> orderedStoragePaths,
+  }) async {
+    await _client.rpc(
+      'reorder_dish_publication_photos',
+      params: {
+        'p_publication_id': publicationId,
+        'p_storage_paths': orderedStoragePaths,
+      },
+    );
   }
 
   Future<void> setPublicationActive({

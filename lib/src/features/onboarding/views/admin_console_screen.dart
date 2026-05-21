@@ -16,7 +16,7 @@ class AdminConsoleScreen extends StatelessWidget {
           IconButton(
             onPressed: sessionViewModel.signOut,
             icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Cerrar sesion',
+            tooltip: 'Cerrar sesión',
           ),
         ],
       ),
