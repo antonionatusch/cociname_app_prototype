@@ -1,3 +1,67 @@
+enum OfferAllergenWarningType { contains, mayContain }
+
+class OfferIngredientItem {
+  final String name;
+  final String source;
+  final bool isConfirmedByCook;
+
+  const OfferIngredientItem({
+    required this.name,
+    required this.source,
+    required this.isConfirmedByCook,
+  });
+
+  factory OfferIngredientItem.fromMap(Map<String, dynamic> map) {
+    return OfferIngredientItem(
+      name: map['name'] as String? ?? 'Ingrediente',
+      source: map['source'] as String? ?? '',
+      isConfirmedByCook: map['is_confirmed_by_cook'] as bool? ?? false,
+    );
+  }
+}
+
+class OfferAllergenWarning {
+  final String code;
+  final String name;
+  final String ingredientName;
+  final OfferAllergenWarningType type;
+  final String source;
+  final String certainty;
+
+  const OfferAllergenWarning({
+    required this.code,
+    required this.name,
+    required this.ingredientName,
+    required this.type,
+    this.source = '',
+    this.certainty = 'contains',
+  });
+
+  factory OfferAllergenWarning.fromMap(Map<String, dynamic> map) {
+    final rawType = map['warning_type'] as String? ?? 'may_contain';
+    return OfferAllergenWarning(
+      code: map['code'] as String? ?? '',
+      name: map['name'] as String? ?? map['code'] as String? ?? 'Alergeno',
+      ingredientName: map['ingredient_name'] as String? ?? 'Ingrediente',
+      type:
+          rawType == 'contains'
+              ? OfferAllergenWarningType.contains
+              : OfferAllergenWarningType.mayContain,
+      source: map['source'] as String? ?? '',
+      certainty: map['certainty'] as String? ?? 'contains',
+    );
+  }
+
+  factory OfferAllergenWarning.fromCode(String code) {
+    return OfferAllergenWarning(
+      code: code,
+      name: code,
+      ingredientName: 'Ingrediente no especificado',
+      type: OfferAllergenWarningType.mayContain,
+    );
+  }
+}
+
 class CookOffer {
   final String id;
   final String requestId;
@@ -19,6 +83,8 @@ class CookOffer {
   final String? publicationZoneLabel;
   final double? distanceKm;
   final List<String> allergenCodes;
+  final List<OfferIngredientItem> ingredients;
+  final List<OfferAllergenWarning> allergenWarnings;
 
   const CookOffer({
     required this.id,
@@ -41,12 +107,39 @@ class CookOffer {
     this.publicationZoneLabel,
     this.distanceKm,
     this.allergenCodes = const [],
+    this.ingredients = const [],
+    this.allergenWarnings = const [],
   });
 
   bool get hasPublicationLocation =>
       publicationLatitude != null && publicationLongitude != null;
 
+  List<OfferAllergenWarning> get containsWarnings =>
+      allergenWarnings
+          .where((item) => item.type == OfferAllergenWarningType.contains)
+          .toList();
+
+  List<OfferAllergenWarning> get mayContainWarnings =>
+      allergenWarnings
+          .where((item) => item.type == OfferAllergenWarningType.mayContain)
+          .toList();
+
   factory CookOffer.fromMap(Map<String, dynamic> map) {
+    final allergenCodes =
+        (map['allergen_codes'] as List<dynamic>?)
+            ?.map((item) => item.toString())
+            .toList() ??
+        const <String>[];
+    final warnings =
+        (map['allergen_warnings'] as List<dynamic>?)
+            ?.whereType<Map>()
+            .map(
+              (item) =>
+                  OfferAllergenWarning.fromMap(Map<String, dynamic>.from(item)),
+            )
+            .toList() ??
+        const <OfferAllergenWarning>[];
+
     return CookOffer(
       id: map['id'] as String? ?? '',
       requestId: map['request_id'] as String? ?? '',
@@ -69,11 +162,21 @@ class CookOffer {
       publicationLongitude: (map['publication_longitude'] as num?)?.toDouble(),
       publicationZoneLabel: map['publication_zone_label'] as String?,
       distanceKm: (map['distance_km'] as num?)?.toDouble(),
-      allergenCodes:
-          (map['allergen_codes'] as List<dynamic>?)
-              ?.map((item) => item.toString())
+      allergenCodes: allergenCodes,
+      ingredients:
+          (map['dish_ingredient_items'] as List<dynamic>?)
+              ?.whereType<Map>()
+              .map(
+                (item) => OfferIngredientItem.fromMap(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
               .toList() ??
           const [],
+      allergenWarnings:
+          warnings.isNotEmpty
+              ? warnings
+              : allergenCodes.map(OfferAllergenWarning.fromCode).toList(),
     );
   }
 }

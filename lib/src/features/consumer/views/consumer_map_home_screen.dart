@@ -4,7 +4,9 @@ import 'package:latlong2/latlong.dart' as latlong;
 import 'package:provider/provider.dart';
 
 import '../../../core/services/permission_service.dart';
+import '../../offers/models/cook_offer.dart';
 import '../../offers/repositories/offer_repository.dart';
+import '../../offers/views/offer_detail_screen.dart';
 import '../../orders/repositories/order_repository.dart';
 import '../../orders/views/active_order_screen.dart';
 import '../repositories/consumer_request_repository.dart';
@@ -673,116 +675,122 @@ class _OffersList extends StatelessWidget {
             itemBuilder: (context, index) {
               final offer = offers[index];
               return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      if (offer.dishPhotoPublicUrl != null &&
-                          offer.dishPhotoPublicUrl!.isNotEmpty) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            offer.dishPhotoPublicUrl!,
-                            width: 56,
-                            height: 56,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (_, __, ___) => Container(
-                                  width: 56,
-                                  height: 56,
-                                  color: Colors.orange[50],
-                                  child: const Icon(Icons.restaurant),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => _openOfferDetail(context, offer),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        if (offer.dishPhotoPublicUrl != null &&
+                            offer.dishPhotoPublicUrl!.isNotEmpty) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              offer.dishPhotoPublicUrl!,
+                              width: 56,
+                              height: 56,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (_, __, ___) => Container(
+                                    width: 56,
+                                    height: 56,
+                                    color: Colors.orange[50],
+                                    child: const Icon(Icons.restaurant),
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                offer.dishTitle ?? 'Oferta de plato',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.storefront,
+                                    size: 14,
+                                    color: Colors.orange[700],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      offer.cookBusinessName ??
+                                          'Cocinero disponible',
+                                      style: TextStyle(color: Colors.grey[700]),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                'Bs. ${offer.price.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  if (offer.estimatedMinutes != null)
+                                    Text(
+                                      '${offer.estimatedMinutes} min',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  if (offer.distanceKm != null)
+                                    Text(
+                                      '${offer.distanceKm!.toStringAsFixed(1)} km',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  if (offer.cookRatingAverage != null)
+                                    Text(
+                                      '${offer.cookRatingAverage!.toStringAsFixed(1)} ★',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                ],
+                              ),
+                              if (offer.allergenWarnings.isNotEmpty)
+                                _OfferAllergenSummary(offer: offer),
+                              if (offer.message.isNotEmpty)
+                                Text(
+                                  offer.message,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 12),
-                      ],
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(width: 8),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              offer.dishTitle ?? 'Oferta de plato',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            FilledButton(
+                              onPressed: () => _acceptOffer(context, offer.id),
+                              child: const Text('Aceptar'),
                             ),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.storefront,
-                                  size: 14,
-                                  color: Colors.orange[700],
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    offer.cookBusinessName ??
-                                        'Cocinero disponible',
-                                    style: TextStyle(color: Colors.grey[700]),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                            TextButton(
+                              onPressed: () => _openOfferDetail(context, offer),
+                              child: const Text('Detalle'),
                             ),
-                            Text(
-                              'Bs. ${offer.price.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            Wrap(
-                              spacing: 8,
-                              children: [
-                                if (offer.estimatedMinutes != null)
-                                  Text(
-                                    '${offer.estimatedMinutes} min',
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                if (offer.distanceKm != null)
-                                  Text(
-                                    '${offer.distanceKm!.toStringAsFixed(1)} km',
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                                if (offer.cookRatingAverage != null)
-                                  Text(
-                                    '${offer.cookRatingAverage!.toStringAsFixed(1)} ★',
-                                    style: TextStyle(color: Colors.grey[600]),
-                                  ),
-                              ],
-                            ),
-                            if (offer.allergenCodes.isNotEmpty)
-                              Text(
-                                'Alergenos: ${offer.allergenCodes.join(', ')}',
-                                style: TextStyle(
-                                  color: Colors.orange[800],
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            if (offer.message.isNotEmpty)
-                              Text(
-                                offer.message,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
                           ],
                         ),
-                      ),
-                      FilledButton(
-                        onPressed: () => _acceptOffer(context, offer.id),
-                        child: const Text('Aceptar'),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -801,6 +809,15 @@ class _OffersList extends StatelessWidget {
     );
   }
 
+  Future<void> _openOfferDetail(BuildContext context, CookOffer offer) async {
+    final acceptedOfferId = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => OfferDetailScreen(offer: offer)),
+    );
+    if (acceptedOfferId != null && context.mounted) {
+      await _acceptOffer(context, acceptedOfferId);
+    }
+  }
+
   Future<void> _acceptOffer(BuildContext context, String offerId) async {
     final vm = this.vm;
     final order = await vm.acceptOffer(offerId);
@@ -817,6 +834,69 @@ class _OffersList extends StatelessWidget {
         ),
       );
     }
+  }
+}
+
+class _OfferAllergenSummary extends StatelessWidget {
+  final CookOffer offer;
+
+  const _OfferAllergenSummary({required this.offer});
+
+  @override
+  Widget build(BuildContext context) {
+    final contains = offer.containsWarnings;
+    final mayContain = offer.mayContainWarnings;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (contains.isNotEmpty)
+            _AllergenSummaryLine(
+              label: 'CONTIENE',
+              value: _warningNames(contains),
+              color: Colors.deepOrange,
+            ),
+          if (mayContain.isNotEmpty)
+            _AllergenSummaryLine(
+              label: 'PUEDE CONTENER',
+              value: _warningNames(mayContain),
+              color: Colors.amber[800]!,
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _warningNames(List<OfferAllergenWarning> warnings) {
+    final seen = <String>{};
+    return warnings
+        .map((warning) => warning.name)
+        .where((name) => seen.add(name))
+        .join(', ');
+  }
+}
+
+class _AllergenSummaryLine extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _AllergenSummaryLine({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '$label: $value',
+      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
   }
 }
 

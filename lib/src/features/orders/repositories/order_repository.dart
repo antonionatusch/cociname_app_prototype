@@ -20,6 +20,14 @@ class OrderRepository {
     await _client.rpc('cancel_active_order', params: {'p_order_id': orderId});
   }
 
+  Future<String?> fetchOrderStatus(String orderId) async {
+    final result = await _client.rpc(
+      'get_order_status',
+      params: {'p_order_id': orderId},
+    );
+    return result as String?;
+  }
+
   Future<Order?> fetchActiveOrder() async {
     final response = await _client.rpc('get_active_order');
 

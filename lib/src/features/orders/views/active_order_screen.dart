@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latlong;
@@ -27,8 +29,74 @@ class ActiveOrderScreen extends StatefulWidget {
 }
 
 class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
+  Timer? _statusPollTimer;
   bool _isCancelling = false;
+  bool _isPollingStatus = false;
+  bool _isLeavingInactiveOrder = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _startStatusPolling();
+  }
+
+  @override
+  void dispose() {
+    _statusPollTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startStatusPolling() {
+    _statusPollTimer?.cancel();
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _pollOrderStatus();
+    });
+  }
+
+  Future<void> _pollOrderStatus() async {
+    if (_isCancelling || _isLeavingInactiveOrder || _isPollingStatus) return;
+
+    _isPollingStatus = true;
+    try {
+      final status = await context.read<OrderRepository>().fetchOrderStatus(
+        widget.order.id,
+      );
+      if (!mounted || _isCancelling || _isLeavingInactiveOrder) return;
+
+      if (status == null || status != 'active') {
+        _leaveInactiveOrder('Pedido cancelado por el otro participante');
+      }
+    } catch (_) {
+    } finally {
+      _isPollingStatus = false;
+    }
+  }
+
+  void _leaveInactiveOrder(String message) {
+    if (!mounted || _isLeavingInactiveOrder) return;
+
+    _isLeavingInactiveOrder = true;
+    _statusPollTimer?.cancel();
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+
+    final cancelledDestinationBuilder = widget.cancelledDestinationBuilder;
+    if (cancelledDestinationBuilder != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: cancelledDestinationBuilder),
+      );
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _isCancelling = false;
+        _error = 'Este pedido ya no está activo.';
+      });
+    }
+  }
 
   Future<void> _confirmCancelOrder() async {
     final confirmed = await showDialog<bool>(
@@ -63,20 +131,7 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
       await context.read<OrderRepository>().cancelOrder(widget.order.id);
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Pedido cancelado')));
-
-      final cancelledDestinationBuilder = widget.cancelledDestinationBuilder;
-      if (cancelledDestinationBuilder != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: cancelledDestinationBuilder),
-        );
-      } else if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(true);
-      } else {
-        setState(() => _isCancelling = false);
-      }
+      _leaveInactiveOrder('Pedido cancelado');
     } catch (e) {
       if (!mounted) return;
       setState(() {
