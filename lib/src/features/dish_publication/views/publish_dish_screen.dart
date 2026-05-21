@@ -20,22 +20,52 @@ class PublishDishScreen extends StatelessWidget {
   }
 }
 
-class _PublishDishView extends StatelessWidget {
+class _PublishDishView extends StatefulWidget {
   const _PublishDishView({this.captureResult});
 
   final InferenceCaptureResult? captureResult;
 
   @override
+  State<_PublishDishView> createState() => _PublishDishViewState();
+}
+
+class _PublishDishViewState extends State<_PublishDishView> {
+  bool _popped = false;
+  PublishDishViewModel? _vm;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _vm ??= context.read<PublishDishViewModel>();
+    if (!_popped) {
+      _vm!.addListener(_onVmChange);
+      if (_vm!.isPublished) _safePop();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!_popped) {
+      _vm?.removeListener(_onVmChange);
+    }
+    super.dispose();
+  }
+
+  void _onVmChange() {
+    if (!_popped && _vm!.isPublished) _safePop();
+  }
+
+  void _safePop() {
+    if (_popped || !mounted) return;
+    _popped = true;
+    _vm?.removeListener(_onVmChange);
+    Navigator.of(context).pop(true);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final vm = context.watch<PublishDishViewModel>();
     final bottomPadding = 24 + MediaQuery.of(context).viewPadding.bottom;
-
-    if (vm.isPublished) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pop(true);
-      });
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -52,87 +82,89 @@ class _PublishDishView extends StatelessWidget {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          if (vm.error != null) _ErrorBanner(message: vm.error!),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _ImagePickerSection(vm: vm),
-                  const SizedBox(height: 16),
-                  if (vm.inferenceResult != null)
-                    _InferenceResultCard(result: vm.inferenceResult!),
-                  if (vm.inferenceResult != null) const SizedBox(height: 16),
-                  _TextField(
-                    label: 'Nombre del plato',
-                    value: vm.title,
-                    onChanged: vm.setTitle,
-                  ),
-                  const SizedBox(height: 8),
-                  _TextField(
-                    label: 'Descripción',
-                    value: vm.description,
-                    onChanged: vm.setDescription,
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _TextField(
-                          label: 'Precio unitario (Bs.)',
-                          value: vm.priceText,
-                          onChanged: vm.setPriceText,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
+      body: vm.isPublished
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                if (vm.error != null) _ErrorBanner(message: vm.error!),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _ImagePickerSection(vm: vm),
+                        const SizedBox(height: 16),
+                        if (vm.inferenceResult != null)
+                          _InferenceResultCard(result: vm.inferenceResult!),
+                        if (vm.inferenceResult != null) const SizedBox(height: 16),
+                        _TextField(
+                          label: 'Nombre del plato',
+                          value: vm.title,
+                          onChanged: vm.setTitle,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _TextField(
-                          label: 'Cantidad disponible',
-                          value: vm.quantityText,
-                          onChanged: vm.setQuantityText,
-                          keyboardType: TextInputType.number,
+                        const SizedBox(height: 8),
+                        _TextField(
+                          label: 'Descripción',
+                          value: vm.description,
+                          onChanged: vm.setDescription,
+                          maxLines: 2,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _TextField(
+                                label: 'Precio unitario (Bs.)',
+                                value: vm.priceText,
+                                onChanged: vm.setPriceText,
+                                keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _TextField(
+                                label: 'Cantidad disponible',
+                                value: vm.quantityText,
+                                onChanged: vm.setQuantityText,
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _LocationSection(vm: vm),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Ingredientes',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        ...vm.ingredients.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final ingredient = entry.value;
+                          return _IngredientTile(
+                            ingredient: ingredient,
+                            onConfirm: () => vm.confirmIngredient(index),
+                            onRemove: () => vm.removeIngredient(index),
+                          );
+                        }),
+                        const SizedBox(height: 8),
+                        _AddIngredientSection(vm: vm),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: vm.isLoading ? null : () => vm.publish(),
+                          child: const Text('Publicar'),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  _LocationSection(vm: vm),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Ingredientes',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  ...vm.ingredients.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final ingredient = entry.value;
-                    return _IngredientTile(
-                      ingredient: ingredient,
-                      onConfirm: () => vm.confirmIngredient(index),
-                      onRemove: () => vm.removeIngredient(index),
-                    );
-                  }),
-                  const SizedBox(height: 8),
-                  _AddIngredientSection(vm: vm),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: vm.isLoading ? null : () => vm.publish(),
-                    child: const Text('Publicar'),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
