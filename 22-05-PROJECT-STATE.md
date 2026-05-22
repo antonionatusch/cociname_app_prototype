@@ -10,18 +10,17 @@ Este documento reemplaza a `21-05-PROJECT-STATE.md` y resume el estado actual de
 - Etapa 4 (ofertas y pedido): **avanzada pero incompleta**. Oferta enriquecida, detalle, aceptacion, pedido activo, cancelacion sincronizada y restauracion funcionan. Falta el flujo de finalizacion del pedido con estados, temporizadores y foto obligatoria de entrega.
 - Etapa 5 (datos semilla, pulido visual y ensayo): **pendiente/parcial**. Hay datos manuales para desarrollo, pero falta set semilla repetible y guia de ensayo final.
 
-## Cambios Y Hallazgos Del 22/05
+## Cambios Y Hallazgos Del 22/05 (Segunda Mitad - Sesión Bugfix + Ofertas Cocineros)
 
-- El codigo ya incluye migraciones posteriores al estado del 21/05: `20260521120000_ui_ux_quantity_photos_ratings.sql` y `20260521220000_auto_toggle_cook_availability.sql`.
-- `consumer_requests` ya soporta `requested_quantity` y `create_consumer_request` recibe `allergen_filters`, `max_radius_km`, `current_radius_km`, latitud y longitud.
-- `create_cook_offer` valida cantidad disponible y enlaza oferta con publicacion activa del emprendedor.
-- `accept_cook_offer` ahora marca la solicitud como `matched`, rechaza ofertas competidoras y pone al cocinero como no disponible.
-- `cancel_active_order` cancela pedido, sincroniza solicitud/ofertas pendientes y vuelve a dejar disponible al cocinero.
-- `ConsumerMapHomeViewModel` obtiene ubicacion actual, crea solicitudes con latitud/longitud, restaura solicitud activa, hace polling de ofertas y de marcadores de cocineros reales disponibles.
-- `ConsumerMapHomeScreen` sigue mostrando chips de restricciones solo visuales (`Sin gluten`, `Sin lacteos`, `Sin huevo`, `Sin mani`) sin estado seleccionado ni envio a `createSearchRequest`.
-- `_DefaultChips` sigue siendo de platos rapidos (`Empanada`, `Pizza`, `Hamburguesa`, `Cunape`); falta agregar chips rapidos de alergenos/preferencias o conectarlos al panel de busqueda.
-- El mapa consumidor no se recentra explicitamente al crear solicitud ni anima circulos de radio incrementales. Solo usa `initialCenter` con la ubicacion actual y un marcador.
-- `ActiveOrderScreen` continua como pantalla compartida de pedido activo con polling de estado y cancelacion, pero no distingue roles ni tiene acciones de preparacion, plato hecho, entrega, evidencia fotografica o completado.
+- Migraciones nuevas: `20260522130000` (fix tipo `allergen_filters` en `create_cook_offer`), `20260522140000` (fix `server_now timestamptz` en `get_active_order`), `20260522150000` (RPC `get_active_cook_offers`), `20260522160000` (invariantes de ganador: lock cook, rechazo de ofertas cruzadas, filtros defensivos, índice único).
+- `ActiveOrderScreen._timeRemainingText`: corregido bug donde el contador saltaba de 3 en 3 segundos por usar `serverNow` congelado sin interpolar. Ahora estima `serverNow` progresivamente desde el último fetch.
+- `CookDashboardScreen`: nueva sección "Ofertas enviadas" que muestra las ofertas pendientes del emprendedor, con nombre del consumidor, plato, precio, cantidad y alérgenos.
+- `accept_cook_offer` ahora también rechaza ofertas del mismo cocinero hacia otros consumidores (no solo del mismo request). Agrega lock de `cook_profiles` con `FOR UPDATE` para serializar aceptaciones simultáneas.
+- `get_offers_for_request` ahora solo devuelve ofertas `pending` cuyo cocinero esté disponible y sin pedido activo. Ofertas de cocineros ocupados desaparecen automáticamente del panel.
+- `create_cook_offer` ahora rechaza crear nuevas ofertas si el cocinero ya tiene un pedido activo.
+- `ConsumerMapHomeViewModel.acceptOffer`: ahora refresca ofertas y reinicia timers si el RPC falla.
+- `ConsumerMapHomeViewModel._pollOffers`: ahora limpia la UI si las ofertas desaparecen (ej. otro consumidor ganó).
+- Índice único parcial `orders_one_active_per_cook_idx` impide a nivel DB que un cocinero tenga más de un `orders.status = 'active'`.
 
 ## Comparacion Con `docs/tecnoupsa/`
 
@@ -111,6 +110,13 @@ Falta:
 | 20260521110000 | add_offer_detail_and_order_status            | OK/NUEVA |
 | 20260521120000 | ui_ux_quantity_photos_ratings                | OK/NUEVA |
 | 20260521220000 | auto_toggle_cook_availability                | OK/NUEVA |
+| 20260522100000 | order_completion_flow                        | OK/NUEVA |
+| 20260522110000 | fix_completed_order_request_cleanup          | OK/NUEVA |
+| 20260522120000 | fix_quantity_decrement_and_allergen_validation| OK/NUEVA |
+| 20260522130000 | fix_create_cook_offer_allergen_filters_type  | OK/NUEVA |
+| 20260522140000 | fix_get_active_order_server_now_type         | OK/NUEVA |
+| 20260522150000 | get_active_cook_offers                       | OK/NUEVA |
+| 20260522160000 | fix_offer_winner_invariants                  | OK/NUEVA |
 
 ### RPCs Clave
 
@@ -126,6 +132,8 @@ Falta:
 - `get_active_order`
 - `cancel_active_order`
 - `get_order_status`
+- `get_active_cook_offers`
+- `get_own_publication_allergens`
 
 ### Supabase Pendiente Para El Nuevo Flujo De Cierre
 
@@ -251,13 +259,15 @@ Falta:
 7. No existe bucket/tabla/RPC para evidencia fotografica de entrega.
 8. `Abrir navegacion` y `Contactar` no ejecutan acciones reales.
 9. Falta set de datos semilla repetible para defensa/demo.
+10. Las tarjetas de solicitud entrante en el panel cocinero no muestran el nombre del solicitante (`consumer_display_name`).
 
 ## Proximo Paso Recomendado
 
-1. Aplicar y probar la migracion `20260522100000_order_completion_flow.sql` en Supabase.
-2. Probar en dos sesiones el flujo nuevo: aceptar oferta, confirmar preparacion, plato hecho, foto de entrega, confirmar entrega y cierre `completed`.
-3. Completar filtros de Etapa 3 por distancia, categoria/plato y alergenos.
-4. Crear seeds y checklist de ensayo para Etapa 5.
+1. Agregar `consumer_display_name` en las tarjetas de solicitud entrante del panel cocinero (pendiente de la sesión actual).
+2. Probar en dos sesiones: crear solicitud, ofertar desde cocinero, ver ofertas pendientes, aceptar desde consumidor, ver ofertas desaparecer del otro consumidor.
+3. Validar que el índice único y los locks previenen la creación de segundos pedidos activos.
+4. Completar filtros de Etapa 3 por distancia, categoria/plato y alergenos.
+5. Crear seeds y checklist de ensayo para Etapa 5.
 
 ## Implementado Tras Este Estado
 
@@ -266,3 +276,19 @@ Falta:
 - `ActiveOrderScreen` ahora muestra UI por rol: cocinero confirma preparacion, marca `Plato hecho`, toma foto obligatoria y confirma entrega; consumidor ve el estado analogo y temporizadores.
 - `ConsumerMapHomeScreen` ahora conecta chips de alergenos al payload, agrega restricciones rapidas, centra el mapa al solicitar y muestra circulos expansivos de radio.
 - `ConsumerMapHomeViewModel` ahora mantiene `visibleSearchRadiusKm`, incrementa el radio visual y detiene la expansion al recibir ofertas/cancelar/aceptar.
+
+### Post-22/05 Sesión Bugfix + Ofertas Cocineros
+
+- Migraciones `20260522130000` a `20260522160000` aplicadas en Supabase.
+- `ActiveOrderScreen._serverAdjustedTimeRemaining`: corregido el cálculo para interpolar `serverNow` con el tiempo local transcurrido. El contador ahora decrementa segundo a segundo en vez de saltar cada 3s.
+- `CookDashboardScreen`: nueva sección "Ofertas enviadas" que lista ofertas pendientes del emprendedor con datos del consumidor, plato, precio, cantidad y alérgenos.
+- `CookActiveOffer`: modelo nuevo en `offers/models/cook_active_offer.dart`.
+- `OfferRepository.fetchActiveCookOffers()`: nuevo método que consume `get_active_cook_offers`.
+- `CookDashboardViewModel`: acepta `OfferRepository`, polling de ofertas activas y método público `refreshActiveOffers()`.
+- `accept_cook_offer`: lock de `cook_profiles`, validación de pedido activo, rechazo de ofertas del mismo cocinero hacia otros consumidores.
+- `get_offers_for_request`: filtros por `co.status = 'pending'`, `cr.status = 'searching'`, `cprof.is_available = true`, `NOT EXISTS` pedido activo.
+- `create_cook_offer`: guard de pedido activo para impedir ofertar si ya hay un pedido en curso.
+- `get_active_cook_offers`: filtro defensivo `cr.status = 'searching'`.
+- Índice único parcial `orders_one_active_per_cook_idx` en `orders (cook_profile_id) WHERE status = 'active'`.
+- `ConsumerMapHomeViewModel.acceptOffer`: reinicia timers y refresca ofertas en caso de error.
+- `ConsumerMapHomeViewModel._pollOffers`: limpia UI y reinicia radio si las ofertas desaparecen.
