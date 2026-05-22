@@ -311,10 +311,10 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   }
 
   Future<Order?> acceptOffer(String offerId) async {
+    _offerPollTimer?.cancel();
+    _radiusTimer?.cancel();
     try {
       await orderRepository.acceptOffer(offerId);
-      _offerPollTimer?.cancel();
-      _radiusTimer?.cancel();
       final order = await orderRepository.fetchActiveOrder();
       _activeOrder = order;
       _activeRequestId = null;

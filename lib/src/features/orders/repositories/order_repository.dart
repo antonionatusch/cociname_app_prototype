@@ -16,7 +16,7 @@ class OrderRepository {
       'accept_cook_offer',
       params: {'p_offer_id': offerId},
     );
-    return result as String;
+    return (result as String?) ?? '';
   }
 
   Future<void> cancelOrder(String orderId) async {

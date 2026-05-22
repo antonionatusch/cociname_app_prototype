@@ -853,12 +853,20 @@ class _SearchingStatus extends StatelessWidget {
   }
 }
 
-class _OffersList extends StatelessWidget {
+class _OffersList extends StatefulWidget {
   final ConsumerMapHomeViewModel vm;
   const _OffersList({required this.vm});
 
   @override
+  State<_OffersList> createState() => _OffersListState();
+}
+
+class _OffersListState extends State<_OffersList> {
+  bool _isAccepting = false;
+
+  @override
   Widget build(BuildContext context) {
+    final vm = widget.vm;
     final offers = vm.receivedOffers;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -994,8 +1002,21 @@ class _OffersList extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             FilledButton(
-                              onPressed: () => _acceptOffer(context, offer.id),
-                              child: const Text('Aceptar'),
+                              onPressed:
+                                  _isAccepting
+                                      ? null
+                                      : () => _acceptOffer(context, offer.id),
+                              child:
+                                  _isAccepting
+                                      ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                      : const Text('Aceptar'),
                             ),
                             TextButton(
                               onPressed: () => _openOfferDetail(context, offer),
@@ -1033,10 +1054,20 @@ class _OffersList extends StatelessWidget {
   }
 
   Future<void> _acceptOffer(BuildContext context, String offerId) async {
-    final vm = this.vm;
+    if (_isAccepting) return;
+    setState(() => _isAccepting = true);
+
+    final vm = widget.vm;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     final order = await vm.acceptOffer(offerId);
-    if (order != null && context.mounted) {
-      Navigator.of(context).pushReplacement(
+
+    if (!mounted) return;
+
+    setState(() => _isAccepting = false);
+
+    if (order != null) {
+      navigator.pushReplacement(
         MaterialPageRoute(
           builder:
               (_) => ActiveOrderScreen(
@@ -1046,6 +1077,12 @@ class _OffersList extends StatelessWidget {
                     (_) => const ConsumerMapHomeScreen(),
               ),
         ),
+      );
+    } else {
+      final errorMsg =
+          vm.error ?? 'Error al aceptar la oferta. Intenta de nuevo.';
+      messenger.showSnackBar(
+        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red[700]),
       );
     }
   }
