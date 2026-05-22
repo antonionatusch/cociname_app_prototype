@@ -299,12 +299,17 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
     if (_activeRequestId == null) return;
 
     try {
+      final hadOffers = _receivedOffers.isNotEmpty;
       _receivedOffers = await offerRepository.fetchOffersForRequest(
         _activeRequestId!,
       );
       if (_receivedOffers.isNotEmpty) {
         _searchStatus = '${_receivedOffers.length} oferta(s) recibida(s)';
         _radiusTimer?.cancel();
+      } else if (hadOffers) {
+        // Offers disappeared (rejected/accepted by another consumer)
+        _searchStatus = 'Oferta ya no disponible. Seguimos buscando...';
+        _startRadiusExpansion();
       }
       notifyListeners();
     } catch (_) {}
@@ -323,6 +328,13 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
       return order;
     } catch (e) {
       _error = 'Error al aceptar oferta: $e';
+      await _pollOffers();
+      if (_activeRequestId != null) {
+        _startOfferPolling();
+        if (_receivedOffers.isEmpty) {
+          _startRadiusExpansion();
+        }
+      }
       notifyListeners();
       return null;
     }
