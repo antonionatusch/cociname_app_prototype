@@ -39,11 +39,13 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
   bool _isPollingStatus = false;
   bool _isLeavingInactiveOrder = false;
   String? _error;
+  DateTime? _serverNowReceivedAt;
 
   @override
   void initState() {
     super.initState();
     _order = widget.order;
+    _serverNowReceivedAt = DateTime.now().toUtc();
     _startStatusPolling();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
@@ -86,7 +88,10 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
         final freshOrder =
             await context.read<OrderRepository>().fetchActiveOrder();
         if (freshOrder != null && mounted) {
-          setState(() => _order = freshOrder);
+          setState(() {
+            _order = freshOrder;
+            _serverNowReceivedAt = DateTime.now().toUtc();
+          });
         }
       }
     } catch (_) {
@@ -122,7 +127,12 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
 
   Future<void> _refreshOrder() async {
     final freshOrder = await context.read<OrderRepository>().fetchActiveOrder();
-    if (freshOrder != null && mounted) setState(() => _order = freshOrder);
+    if (freshOrder != null && mounted) {
+      setState(() {
+        _order = freshOrder;
+        _serverNowReceivedAt = DateTime.now().toUtc();
+      });
+    }
   }
 
   Future<void> _runOrderAction(
@@ -581,8 +591,10 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
     final serverNow = _order.serverNow;
     final localNow = DateTime.now().toUtc();
     if (serverNow == null) return deadline.toUtc().difference(localNow);
-    final offset = localNow.difference(serverNow);
-    return deadline.toUtc().difference(localNow) + offset;
+    if (_serverNowReceivedAt == null) return deadline.toUtc().difference(localNow);
+    final elapsedSinceFetch = localNow.difference(_serverNowReceivedAt!);
+    final estimatedServerNow = serverNow.add(elapsedSinceFetch);
+    return deadline.toUtc().difference(estimatedServerNow);
   }
 
   String _timeRemainingText(DateTime deadline) {
