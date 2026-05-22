@@ -21,9 +21,12 @@ class CookRequestRepository {
         .order('created_at', ascending: false)
         .limit(20);
 
-    final requests = (response as List<dynamic>)
-        .map((item) => ConsumerRequest.fromMap(item as Map<String, dynamic>))
-        .toList();
+    final requests =
+        (response as List<dynamic>)
+            .map(
+              (item) => ConsumerRequest.fromMap(item as Map<String, dynamic>),
+            )
+            .toList();
 
     if (cookLatitude == null || cookLongitude == null || maxRadiusKm == null) {
       return requests;
@@ -41,9 +44,12 @@ class CookRequestRepository {
       return distance > maxRadiusKm;
     });
 
-    final maxRequestRadius = requests
-        .map((r) => r.maxRadiusKm)
-        .reduce((a, b) => a > b ? a : b);
+    final maxRequestRadius =
+        requests.isEmpty
+            ? double.infinity
+            : requests
+                .map((r) => r.maxRadiusKm)
+                .reduce((a, b) => a > b ? a : b);
 
     requests.removeWhere((request) {
       final distance = latlong.Distance().as(

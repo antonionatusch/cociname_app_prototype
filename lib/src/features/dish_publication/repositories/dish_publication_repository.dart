@@ -93,14 +93,45 @@ class DishPublicationRepository {
         )
         .order('created_at', ascending: false);
 
-    return (response as List<dynamic>)
-        .map(
-          (item) => DishPublication.fromMap(
-            item as Map<String, dynamic>,
-            photoPublicUrl,
-          ),
-        )
-        .toList();
+    final publications =
+        (response as List<dynamic>)
+            .map(
+              (item) => DishPublication.fromMap(
+                item as Map<String, dynamic>,
+                photoPublicUrl,
+              ),
+            )
+            .toList();
+
+    if (publications.isNotEmpty) {
+      try {
+        final allergenResult = await _client.rpc(
+          'get_own_publication_allergens',
+        );
+        final allergenList = allergenResult as List<dynamic>;
+        final allergenMap = <String, List<String>>{};
+        for (final row in allergenList) {
+          final rowMap = row as Map<String, dynamic>;
+          final pubId = rowMap['publication_id'] as String?;
+          final codes =
+              (rowMap['allergen_codes'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
+          if (pubId != null) {
+            allergenMap[pubId] = codes;
+          }
+        }
+        for (var i = 0; i < publications.length; i++) {
+          final codes = allergenMap[publications[i].id] ?? const <String>[];
+          if (codes.isNotEmpty) {
+            publications[i] = publications[i].copyWith(allergenCodes: codes);
+          }
+        }
+      } catch (_) {}
+    }
+
+    return publications;
   }
 
   Future<void> addPublicationPhoto({

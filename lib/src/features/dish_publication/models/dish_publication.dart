@@ -38,6 +38,7 @@ class DishPublication {
     this.zoneLabel,
     this.ratingAverage = 5.0,
     this.ratingCount = 0,
+    this.allergenCodes = const [],
     required this.photos,
   });
 
@@ -52,6 +53,7 @@ class DishPublication {
   final String? zoneLabel;
   final double ratingAverage;
   final int ratingCount;
+  final List<String> allergenCodes;
   final List<DishPublicationPhoto> photos;
 
   DishPublicationPhoto? get coverPhoto => photos.isEmpty ? null : photos.first;
@@ -87,6 +89,11 @@ class DishPublication {
       zoneLabel: map['zone_label'] as String?,
       ratingAverage: (map['rating_average'] as num?)?.toDouble() ?? 5.0,
       ratingCount: (map['rating_count'] as num?)?.toInt() ?? 0,
+      allergenCodes:
+          (map['allergen_codes'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       photos: rawPhotos,
     );
   }
@@ -102,6 +109,7 @@ class DishPublication {
     String? zoneLabel,
     double? ratingAverage,
     int? ratingCount,
+    List<String>? allergenCodes,
     List<DishPublicationPhoto>? photos,
   }) {
     return DishPublication(
@@ -116,6 +124,7 @@ class DishPublication {
       zoneLabel: zoneLabel ?? this.zoneLabel,
       ratingAverage: ratingAverage ?? this.ratingAverage,
       ratingCount: ratingCount ?? this.ratingCount,
+      allergenCodes: allergenCodes ?? this.allergenCodes,
       photos: photos ?? this.photos,
     );
   }

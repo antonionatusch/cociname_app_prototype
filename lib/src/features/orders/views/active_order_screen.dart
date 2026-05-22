@@ -577,8 +577,16 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
     }
   }
 
+  Duration _serverAdjustedTimeRemaining(DateTime deadline) {
+    final serverNow = _order.serverNow;
+    final localNow = DateTime.now().toUtc();
+    if (serverNow == null) return deadline.toUtc().difference(localNow);
+    final offset = localNow.difference(serverNow);
+    return deadline.toUtc().difference(localNow) + offset;
+  }
+
   String _timeRemainingText(DateTime deadline) {
-    final remaining = deadline.toLocal().difference(DateTime.now());
+    final remaining = _serverAdjustedTimeRemaining(deadline);
     if (remaining.isNegative) return 'Tiempo vencido';
     final minutes = remaining.inMinutes
         .remainder(60)

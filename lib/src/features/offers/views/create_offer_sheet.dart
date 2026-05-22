@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/helpers/allergen_display_helper.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../consumer/models/consumer_request.dart';
 import '../../dish_publication/models/dish_publication.dart';
@@ -37,6 +38,15 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
     return null;
   }
 
+  bool get _hasIncompatibleAllergens {
+    final publication = _selectedPublication;
+    if (publication == null) return false;
+    if (widget.request.allergenFilters.isEmpty) return false;
+    return widget.request.allergenFilters.any(
+      (filter) => publication.allergenCodes.contains(filter),
+    );
+  }
+
   double? get _referenceTotal {
     final publication = _selectedPublication;
     if (publication == null) return null;
@@ -64,6 +74,11 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
         selectedPublication != null &&
         selectedPublication.availableQuantity <
             widget.request.requestedQuantity;
+    final hasIncompatibleAllergens = _hasIncompatibleAllergens;
+    final bool canSubmit =
+        _selectedPublicationId != null &&
+        !hasInsufficientQuantity &&
+        !hasIncompatibleAllergens;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
@@ -97,6 +112,22 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
               'Presupuesto total: Bs. ${widget.request.targetPrice.toStringAsFixed(0)}',
               style: TextStyle(color: Colors.grey[600]),
             ),
+            const SizedBox(height: 4),
+            Text(
+              widget.request.allergenFilters.isEmpty
+                  ? 'Sin alergias declaradas'
+                  : 'Alérgico a: ${formatAllergenFilters(widget.request.allergenFilters)}',
+              style: TextStyle(
+                color:
+                    widget.request.allergenFilters.isEmpty
+                        ? Colors.grey[600]
+                        : Colors.red[700],
+                fontWeight:
+                    widget.request.allergenFilters.isNotEmpty
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+              ),
+            ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               isExpanded: true,
@@ -105,19 +136,26 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
                 border: OutlineInputBorder(),
               ),
               items:
-                  widget.publications
-                      .where((p) => p.isActive)
-                      .map(
-                        (p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(
-                            '${p.title} - Bs. ${p.price.toStringAsFixed(0)} por unidad',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  widget.publications.where((p) => p.isActive).map((p) {
+                    final hasAllergenConflict = widget.request.allergenFilters
+                        .any((f) => p.allergenCodes.contains(f));
+                    final insufficientStock =
+                        p.availableQuantity < widget.request.requestedQuantity;
+                    String hint = '';
+                    if (hasAllergenConflict) {
+                      hint =
+                          ' - Contiene ${formatAllergenFilters(p.allergenCodes.where((c) => widget.request.allergenFilters.contains(c)).toList())}';
+                    }
+                    return DropdownMenuItem(
+                      value: p.id,
+                      enabled: !hasAllergenConflict && !insufficientStock,
+                      child: Text(
+                        '${p.title} - Bs. ${p.price.toStringAsFixed(0)} - Disp: ${p.availableQuantity}$hint',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
               onChanged: _onPublicationChanged,
             ),
             if (selectedPublication != null) ...[
@@ -173,6 +211,13 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
               ),
               maxLines: 2,
             ),
+            if (hasIncompatibleAllergens) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Esta publicación contiene alérgenos restringidos por el consumidor.',
+                style: TextStyle(color: AppTheme.error),
+              ),
+            ],
             if (_error != null) ...[
               const SizedBox(height: 8),
               Text(_error!, style: const TextStyle(color: AppTheme.error)),
@@ -181,7 +226,7 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _isSaving ? null : _createOffer,
+                onPressed: (_isSaving || !canSubmit) ? null : _createOffer,
                 child:
                     _isSaving
                         ? const SizedBox(
@@ -226,6 +271,15 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
         () =>
             _error =
                 'Solo tienes ${publication.availableQuantity} disponible(s) para una solicitud de ${widget.request.requestedQuantity}.',
+      );
+      return;
+    }
+
+    if (_hasIncompatibleAllergens) {
+      setState(
+        () =>
+            _error =
+                'Esta publicación contiene alérgenos restringidos por el consumidor.',
       );
       return;
     }

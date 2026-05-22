@@ -19,6 +19,7 @@ import '../../dish_publication/views/publish_dish_screen.dart';
 import '../../maps/views/location_picker_screen.dart';
 import '../../offers/views/create_offer_sheet.dart';
 import '../../orders/repositories/order_repository.dart';
+import '../../../core/helpers/allergen_display_helper.dart';
 import '../../orders/views/active_order_screen.dart';
 import '../repositories/cook_request_repository.dart';
 import '../viewmodels/cook_dashboard_viewmodel.dart';
@@ -389,7 +390,12 @@ class _IncomingRequestCard extends StatelessWidget {
                   label: '${request.maxRadiusKm.toStringAsFixed(0)} km',
                 ),
                 if (request.allergenFilters.isNotEmpty)
-                  _InfoChip(label: request.allergenFilters.join(', ')),
+                  _InfoChip(
+                    label:
+                        'Alérgico a: ${formatAllergenFilters(request.allergenFilters)}',
+                  )
+                else
+                  _InfoChip(label: 'Sin alergias declaradas'),
               ],
             ),
             const SizedBox(height: 10),

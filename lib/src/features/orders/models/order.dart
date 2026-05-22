@@ -30,6 +30,7 @@ class Order {
   final double? consumerLongitude;
   final String? dishPhotoStoragePath;
   final String? dishPhotoPublicUrl;
+  final DateTime? serverNow;
 
   const Order({
     required this.id,
@@ -53,6 +54,7 @@ class Order {
     this.viewerRole,
     this.deliveryPhotoStoragePath,
     this.deliveryPhotoPublicUrl,
+    this.serverNow,
     required this.createdAt,
     this.dishTitle,
     this.cookBusinessName,
@@ -105,6 +107,7 @@ class Order {
       viewerRole: map['viewer_role'] as String?,
       deliveryPhotoStoragePath: map['delivery_photo_storage_path'] as String?,
       deliveryPhotoPublicUrl: map['delivery_photo_public_url'] as String?,
+      serverNow: _dateTime(map['server_now']),
       createdAt:
           DateTime.tryParse(map['created_at'] as String? ?? '') ??
           DateTime.now(),
