@@ -351,20 +351,64 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
                 if (order.deliveryPhotoPublicUrl != null &&
                     order.deliveryPhotoPublicUrl!.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  ClipRRect(
+                  InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      order.deliveryPhotoPublicUrl!,
-                      height: 96,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (_, __, ___) => Container(
+                    onTap:
+                        () => _openDeliveryPhotoViewer(
+                          order.deliveryPhotoPublicUrl!,
+                        ),
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            order.deliveryPhotoPublicUrl!,
                             height: 96,
-                            alignment: Alignment.center,
-                            color: Colors.green[50],
-                            child: const Text('Foto de entrega registrada'),
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) => Container(
+                                  height: 96,
+                                  alignment: Alignment.center,
+                                  color: Colors.green[50],
+                                  child: const Text(
+                                    'Foto de entrega registrada',
+                                  ),
+                                ),
                           ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.zoom_in,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Ver foto',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -548,6 +592,52 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
       return '${remaining.inHours}:$minutes:$seconds';
     }
     return '$minutes:$seconds';
+  }
+
+  void _openDeliveryPhotoViewer(String photoUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _DeliveryPhotoViewer(photoUrl: photoUrl),
+      ),
+    );
+  }
+}
+
+class _DeliveryPhotoViewer extends StatelessWidget {
+  final String photoUrl;
+
+  const _DeliveryPhotoViewer({required this.photoUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Foto de entrega'),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4,
+          child: Image.network(
+            photoUrl,
+            fit: BoxFit.contain,
+            errorBuilder:
+                (_, __, ___) => const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'No se pudo cargar la foto de entrega.',
+                    style: TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

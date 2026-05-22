@@ -406,10 +406,19 @@ class _SearchPanel extends StatefulWidget {
 }
 
 class _SearchPanelState extends State<_SearchPanel> {
+  final _sheetController = DraggableScrollableController();
   final _queryController = TextEditingController();
   final _quantityController = TextEditingController(text: '1');
   final _budgetController = TextEditingController();
   final _radiusController = TextEditingController(text: '4');
+  final _queryFocusNode = FocusNode();
+  final _budgetFocusNode = FocusNode();
+  final _quantityFocusNode = FocusNode();
+  final _radiusFocusNode = FocusNode();
+  final _queryKey = GlobalKey();
+  final _budgetKey = GlobalKey();
+  final _quantityKey = GlobalKey();
+  final _radiusKey = GlobalKey();
   final Set<String> _selectedAllergens = {};
   bool _isCreating = false;
   String? _validationError;
@@ -419,6 +428,16 @@ class _SearchPanelState extends State<_SearchPanel> {
     super.initState();
     _queryController.text = widget.initialQuery ?? '';
     _selectedAllergens.addAll(widget.initialAllergens);
+    _queryFocusNode.addListener(() => _onFocus(_queryFocusNode, _queryKey));
+    _budgetFocusNode.addListener(() => _onFocus(_budgetFocusNode, _budgetKey));
+    _quantityFocusNode.addListener(
+      () => _onFocus(_quantityFocusNode, _quantityKey),
+    );
+    _radiusFocusNode.addListener(() => _onFocus(_radiusFocusNode, _radiusKey));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _expandSheet();
+    });
   }
 
   @override
@@ -436,11 +455,40 @@ class _SearchPanelState extends State<_SearchPanel> {
 
   @override
   void dispose() {
+    _sheetController.dispose();
     _queryController.dispose();
     _quantityController.dispose();
     _budgetController.dispose();
     _radiusController.dispose();
+    _queryFocusNode.dispose();
+    _budgetFocusNode.dispose();
+    _quantityFocusNode.dispose();
+    _radiusFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onFocus(FocusNode focusNode, GlobalKey key) {
+    if (!focusNode.hasFocus) return;
+    _expandSheet();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = key.currentContext;
+      if (context == null || !mounted) return;
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        alignment: 0.18,
+      );
+    });
+  }
+
+  void _expandSheet() {
+    if (!_sheetController.isAttached) return;
+    _sheetController.animateTo(
+      0.92,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -458,9 +506,10 @@ class _SearchPanelState extends State<_SearchPanel> {
             child: GestureDetector(
               onTap: () {},
               child: DraggableScrollableSheet(
-                initialChildSize: 0.7,
-                minChildSize: 0.4,
-                maxChildSize: 0.9,
+                controller: _sheetController,
+                initialChildSize: 0.86,
+                minChildSize: 0.45,
+                maxChildSize: 0.95,
                 builder: (context, scrollController) {
                   final mediaQuery = MediaQuery.of(context);
                   return Container(
@@ -497,46 +546,62 @@ class _SearchPanelState extends State<_SearchPanel> {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 16),
-                        TextField(
-                          controller: _queryController,
-                          decoration: const InputDecoration(
-                            labelText: 'Plato',
-                            hintText: 'Ej.: empanada, pizza',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.search),
+                        KeyedSubtree(
+                          key: _queryKey,
+                          child: TextField(
+                            controller: _queryController,
+                            focusNode: _queryFocusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Plato',
+                              hintText: 'Ej.: empanada, pizza',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.search),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        TextField(
-                          controller: _budgetController,
-                          decoration: const InputDecoration(
-                            labelText: 'Presupuesto total (Bs.)',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.monetization_on),
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
+                        KeyedSubtree(
+                          key: _budgetKey,
+                          child: TextField(
+                            controller: _budgetController,
+                            focusNode: _budgetFocusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Presupuesto total (Bs.)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.monetization_on),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        TextField(
-                          controller: _quantityController,
-                          decoration: const InputDecoration(
-                            labelText: 'Cantidad requerida',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.format_list_numbered),
+                        KeyedSubtree(
+                          key: _quantityKey,
+                          child: TextField(
+                            controller: _quantityController,
+                            focusNode: _quantityFocusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Cantidad requerida',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.format_list_numbered),
+                            ),
+                            keyboardType: TextInputType.number,
                           ),
-                          keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 12),
-                        TextField(
-                          controller: _radiusController,
-                          decoration: const InputDecoration(
-                            labelText: 'Radio máximo (km)',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.radio_button_checked),
+                        KeyedSubtree(
+                          key: _radiusKey,
+                          child: TextField(
+                            controller: _radiusController,
+                            focusNode: _radiusFocusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Radio máximo (km)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.radio_button_checked),
+                            ),
+                            keyboardType: TextInputType.number,
                           ),
-                          keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 16),
                         const Text(
