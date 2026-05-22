@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import '../../consumer/models/consumer_request.dart';
 import '../../dish_publication/models/dish_publication.dart';
 import '../../dish_publication/repositories/dish_publication_repository.dart';
+import '../../offers/models/cook_active_offer.dart';
+import '../../offers/repositories/offer_repository.dart';
 import '../../orders/models/order.dart';
 import '../../orders/repositories/order_repository.dart';
 import '../repositories/cook_request_repository.dart';
@@ -15,6 +17,7 @@ class CookDashboardViewModel extends ChangeNotifier {
     required this.publicationRepository,
     required this.cookRequestRepository,
     required this.orderRepository,
+    required this.offerRepository,
   }) {
     _startPolling();
   }
@@ -22,6 +25,7 @@ class CookDashboardViewModel extends ChangeNotifier {
   final DishPublicationRepository publicationRepository;
   final CookRequestRepository cookRequestRepository;
   final OrderRepository orderRepository;
+  final OfferRepository offerRepository;
   Timer? _pollTimer;
 
   bool _isLoading = false;
@@ -43,12 +47,16 @@ class CookDashboardViewModel extends ChangeNotifier {
   bool _hasIncomingRequests = false;
   bool get hasIncomingRequests => _hasIncomingRequests;
 
+  List<CookActiveOffer> _activeOffers = const [];
+  List<CookActiveOffer> get activeOffers => _activeOffers;
+
   Order? _activeOrder;
   Order? get activeOrder => _activeOrder;
 
   void _startPolling() {
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       _pollIncomingRequests();
+      _pollActiveOffers();
       _pollActiveOrder();
     });
   }
@@ -87,6 +95,17 @@ class CookDashboardViewModel extends ChangeNotifier {
     } catch (_) {}
   }
 
+  Future<void> _pollActiveOffers() async {
+    try {
+      _activeOffers = await offerRepository.fetchActiveCookOffers();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> refreshActiveOffers() async {
+    await _pollActiveOffers();
+  }
+
   Future<void> load() async {
     _isLoading = true;
     _error = null;
@@ -100,6 +119,7 @@ class CookDashboardViewModel extends ChangeNotifier {
       _publications = results[0] as List<DishPublication>;
       _isAvailable = results[1] as bool;
       await _pollActiveOrder();
+      await _pollActiveOffers();
     } catch (_) {
       _error = 'No se pudo cargar tu panel. Intentalo nuevamente.';
     }

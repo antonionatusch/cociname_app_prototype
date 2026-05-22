@@ -17,6 +17,8 @@ import '../../dish_publication/services/tflite_vision_classifier_service.dart';
 import '../../dish_publication/viewmodels/publish_dish_viewmodel.dart';
 import '../../dish_publication/views/publish_dish_screen.dart';
 import '../../maps/views/location_picker_screen.dart';
+import '../../offers/models/cook_active_offer.dart';
+import '../../offers/repositories/offer_repository.dart';
 import '../../offers/views/create_offer_sheet.dart';
 import '../../orders/repositories/order_repository.dart';
 import '../../../core/helpers/allergen_display_helper.dart';
@@ -44,6 +46,7 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
       publicationRepository: context.read<DishPublicationRepository>(),
       cookRequestRepository: context.read<CookRequestRepository>(),
       orderRepository: context.read<OrderRepository>(),
+      offerRepository: context.read<OfferRepository>(),
     )..load();
   }
 
@@ -270,7 +273,19 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                         request: request,
                         publications: vm.publications,
                         onIgnore: () => vm.ignoreRequest(request.id),
+                        onOfferCreated: vm.refreshActiveOffers,
                       ),
+                    ),
+                  ],
+                  if (vm.activeOffers.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      'Ofertas enviadas',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    ...vm.activeOffers.map(
+                      (offer) => _ActiveOfferCard(offer: offer),
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -347,11 +362,13 @@ class _IncomingRequestCard extends StatelessWidget {
   final ConsumerRequest request;
   final List<DishPublication> publications;
   final VoidCallback onIgnore;
+  final VoidCallback? onOfferCreated;
 
   const _IncomingRequestCard({
     required this.request,
     required this.publications,
     required this.onIgnore,
+    this.onOfferCreated,
   });
 
   @override
@@ -424,7 +441,10 @@ class _IncomingRequestCard extends StatelessWidget {
           (sheetContext) =>
               CreateOfferSheet(request: request, publications: publications),
     );
-    if (created == true) onIgnore();
+    if (created == true) {
+      onIgnore();
+      onOfferCreated?.call();
+    }
   }
 }
 
@@ -1338,6 +1358,79 @@ class _ErrorBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(message, style: const TextStyle(color: AppTheme.error)),
+    );
+  }
+}
+
+class _ActiveOfferCard extends StatelessWidget {
+  final CookActiveOffer offer;
+
+  const _ActiveOfferCard({required this.offer});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.send, color: colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    offer.consumerDisplayName ?? 'Consumidor',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Text(
+                  'Bs. ${offer.price.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (offer.consumerQueryText != null &&
+                offer.consumerQueryText!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('Busca: ${offer.consumerQueryText}'),
+              ),
+            Text('Plato ofertado: ${offer.dishTitle ?? 'Sin título'}'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InfoChip(label: 'Cantidad: ${offer.requestedQuantity}'),
+                _InfoChip(
+                  label:
+                      'Prep. ${offer.estimatedMinutes ?? '?'} min',
+                ),
+                if (offer.consumerTargetPrice != null)
+                  _InfoChip(
+                    label:
+                        'Presupuesto: Bs. ${offer.consumerTargetPrice!.toStringAsFixed(0)}',
+                  ),
+                if (offer.consumerAllergenFilters.isNotEmpty)
+                  _InfoChip(
+                    label:
+                        'Alérgico a: ${formatAllergenFilters(offer.consumerAllergenFilters)}',
+                  )
+                else
+                  _InfoChip(label: 'Sin alergias declaradas'),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

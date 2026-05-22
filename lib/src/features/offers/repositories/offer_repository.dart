@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/cook_active_offer.dart';
 import '../models/cook_offer.dart';
 
 class OfferRepository {
@@ -29,6 +30,14 @@ class OfferRepository {
     );
 
     return result as String;
+  }
+
+  Future<List<CookActiveOffer>> fetchActiveCookOffers() async {
+    final response = await _client.rpc('get_active_cook_offers');
+
+    return (response as List<dynamic>).map((item) {
+      return CookActiveOffer.fromMap(Map<String, dynamic>.from(item as Map));
+    }).toList();
   }
 
   Future<List<CookOffer>> fetchOffersForRequest(String requestId) async {
