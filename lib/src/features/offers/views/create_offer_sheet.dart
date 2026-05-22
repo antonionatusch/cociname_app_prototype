@@ -38,9 +38,7 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
     return null;
   }
 
-  bool get _hasIncompatibleAllergens {
-    final publication = _selectedPublication;
-    if (publication == null) return false;
+  bool _publicationHasAllergenConflict(DishPublication publication) {
     if (widget.request.allergenFilters.isEmpty) return false;
     return widget.request.allergenFilters.any(
       (filter) => publication.allergenCodes.contains(filter),
@@ -74,11 +72,6 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
         selectedPublication != null &&
         selectedPublication.availableQuantity <
             widget.request.requestedQuantity;
-    final hasIncompatibleAllergens = _hasIncompatibleAllergens;
-    final bool canSubmit =
-        _selectedPublicationId != null &&
-        !hasInsufficientQuantity &&
-        !hasIncompatibleAllergens;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding),
@@ -137,18 +130,18 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
               ),
               items:
                   widget.publications.where((p) => p.isActive).map((p) {
-                    final hasAllergenConflict = widget.request.allergenFilters
-                        .any((f) => p.allergenCodes.contains(f));
+                    final incompatible = _publicationHasAllergenConflict(p);
                     final insufficientStock =
                         p.availableQuantity < widget.request.requestedQuantity;
                     String hint = '';
-                    if (hasAllergenConflict) {
+                    if (incompatible) {
                       hint =
                           ' - Contiene ${formatAllergenFilters(p.allergenCodes.where((c) => widget.request.allergenFilters.contains(c)).toList())}';
+                    } else if (insufficientStock) {
+                      hint = ' - Stock insuficiente';
                     }
                     return DropdownMenuItem(
                       value: p.id,
-                      enabled: !hasAllergenConflict && !insufficientStock,
                       child: Text(
                         '${p.title} - Bs. ${p.price.toStringAsFixed(0)} - Disp: ${p.availableQuantity}$hint',
                         maxLines: 3,
@@ -211,13 +204,6 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
               ),
               maxLines: 2,
             ),
-            if (hasIncompatibleAllergens) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'Esta publicación contiene alérgenos restringidos por el consumidor.',
-                style: TextStyle(color: AppTheme.error),
-              ),
-            ],
             if (_error != null) ...[
               const SizedBox(height: 8),
               Text(_error!, style: const TextStyle(color: AppTheme.error)),
@@ -226,7 +212,7 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: (_isSaving || !canSubmit) ? null : _createOffer,
+                onPressed: _isSaving ? null : _createOffer,
                 child:
                     _isSaving
                         ? const SizedBox(
@@ -244,6 +230,36 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
   }
 
   void _onPublicationChanged(String? value) {
+    if (value == null) {
+      setState(() {
+        _selectedPublicationId = null;
+      });
+      return;
+    }
+
+    final publication =
+        widget.publications.where((p) => p.id == value).firstOrNull;
+
+    if (publication != null && _publicationHasAllergenConflict(publication)) {
+      showDialog<void>(
+        context: context,
+        builder:
+            (dialogContext) => AlertDialog(
+              title: const Text('Alérgenos incompatibles'),
+              content: const Text(
+                'Este consumidor es alérgico a uno de tus ingredientes declarados, y está filtrando las ofertas con ese alérgeno. Ofrece otro plato o a otro consumidor.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Entendido'),
+                ),
+              ],
+            ),
+      );
+      return;
+    }
+
     setState(() {
       _selectedPublicationId = value;
       _applyReferenceTotal(force: !_priceWasEdited);
@@ -271,15 +287,6 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
         () =>
             _error =
                 'Solo tienes ${publication.availableQuantity} disponible(s) para una solicitud de ${widget.request.requestedQuantity}.',
-      );
-      return;
-    }
-
-    if (_hasIncompatibleAllergens) {
-      setState(
-        () =>
-            _error =
-                'Esta publicación contiene alérgenos restringidos por el consumidor.',
       );
       return;
     }
