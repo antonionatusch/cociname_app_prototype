@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart' as latlong;
 import 'package:provider/provider.dart';
 
@@ -30,7 +31,11 @@ class ActiveOrderScreen extends StatefulWidget {
 
 class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
   Timer? _statusPollTimer;
+  Timer? _clockTimer;
+  late Order _order;
   bool _isCancelling = false;
+  bool _isUpdatingPhase = false;
+  bool _isUploadingDeliveryPhoto = false;
   bool _isPollingStatus = false;
   bool _isLeavingInactiveOrder = false;
   String? _error;
@@ -38,12 +43,17 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
   @override
   void initState() {
     super.initState();
+    _order = widget.order;
     _startStatusPolling();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
     _statusPollTimer?.cancel();
+    _clockTimer?.cancel();
     super.dispose();
   }
 
@@ -60,12 +70,24 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
     _isPollingStatus = true;
     try {
       final status = await context.read<OrderRepository>().fetchOrderStatus(
-        widget.order.id,
+        _order.id,
       );
       if (!mounted || _isCancelling || _isLeavingInactiveOrder) return;
 
-      if (status == null || status != 'active') {
-        _leaveInactiveOrder('Pedido cancelado por el otro participante');
+      if (status == null) {
+        _leaveInactiveOrder('Pedido cerrado');
+      } else if (status != 'active') {
+        _leaveInactiveOrder(
+          status == 'completed'
+              ? 'Pedido completado'
+              : 'Pedido cancelado por el otro participante',
+        );
+      } else {
+        final freshOrder =
+            await context.read<OrderRepository>().fetchActiveOrder();
+        if (freshOrder != null && mounted) {
+          setState(() => _order = freshOrder);
+        }
       }
     } catch (_) {
     } finally {
@@ -95,6 +117,55 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
         _isCancelling = false;
         _error = 'Este pedido ya no está activo.';
       });
+    }
+  }
+
+  Future<void> _refreshOrder() async {
+    final freshOrder = await context.read<OrderRepository>().fetchActiveOrder();
+    if (freshOrder != null && mounted) setState(() => _order = freshOrder);
+  }
+
+  Future<void> _runOrderAction(
+    Future<void> Function(OrderRepository) action,
+  ) async {
+    setState(() {
+      _isUpdatingPhase = true;
+      _error = null;
+    });
+
+    try {
+      await action(context.read<OrderRepository>());
+      await _refreshOrder();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'No se pudo actualizar el pedido: $e');
+    } finally {
+      if (mounted) setState(() => _isUpdatingPhase = false);
+    }
+  }
+
+  Future<void> _takeDeliveryPhoto() async {
+    setState(() {
+      _isUploadingDeliveryPhoto = true;
+      _error = null;
+    });
+
+    try {
+      final repository = context.read<OrderRepository>();
+      final picker = ImagePicker();
+      final photo = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+        maxWidth: 1600,
+      );
+      if (photo == null) return;
+      await repository.uploadDeliveryPhoto(orderId: _order.id, photo: photo);
+      await _refreshOrder();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'No se pudo subir la foto de entrega: $e');
+    } finally {
+      if (mounted) setState(() => _isUploadingDeliveryPhoto = false);
     }
   }
 
@@ -128,7 +199,7 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
     });
 
     try {
-      await context.read<OrderRepository>().cancelOrder(widget.order.id);
+      await context.read<OrderRepository>().cancelOrder(_order.id);
       if (!mounted) return;
 
       _leaveInactiveOrder('Pedido cancelado');
@@ -143,7 +214,7 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final order = widget.order;
+    final order = _order;
     final center =
         order.hasPublicationLocation
             ? latlong.LatLng(
@@ -226,14 +297,14 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
+                    Icon(
+                      _phaseIcon(order),
+                      color: _phaseColor(order),
                       size: 24,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Pedido en curso',
+                      _phaseTitle(order),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -266,11 +337,61 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
                   label: 'Consumidor',
                   value: resolvedConsumerLabel,
                 ),
+                _InfoRow(
+                  icon: Icons.timelapse,
+                  label: 'Estado',
+                  value: _phaseDescription(order),
+                ),
+                if (_deadlineFor(order) != null)
+                  _InfoRow(
+                    icon: Icons.timer,
+                    label: 'Tiempo restante',
+                    value: _timeRemainingText(_deadlineFor(order)!),
+                  ),
+                if (order.deliveryPhotoPublicUrl != null &&
+                    order.deliveryPhotoPublicUrl!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      order.deliveryPhotoPublicUrl!,
+                      height: 96,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (_, __, ___) => Container(
+                            height: 96,
+                            alignment: Alignment.center,
+                            color: Colors.green[50],
+                            child: const Text('Foto de entrega registrada'),
+                          ),
+                    ),
+                  ),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: 10),
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                 ],
                 const SizedBox(height: 16),
+                _OrderPhaseActions(
+                  order: order,
+                  isBusy: _isUpdatingPhase,
+                  isUploadingPhoto: _isUploadingDeliveryPhoto,
+                  onConfirmPreparation:
+                      () => _runOrderAction(
+                        (repo) => repo.confirmPreparation(order.id),
+                      ),
+                  onMarkReady:
+                      () => _runOrderAction((repo) => repo.markReady(order.id)),
+                  onTakeDeliveryPhoto: _takeDeliveryPhoto,
+                  onConfirmDelivery:
+                      order.hasDeliveryPhoto
+                          ? () => _runOrderAction(
+                            (repo) => repo.confirmDelivery(order.id),
+                          )
+                          : null,
+                ),
+                if (order.status == 'active') const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
@@ -316,6 +437,237 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  IconData _phaseIcon(Order order) {
+    switch (order.orderPhase) {
+      case 'awaiting_preparation_confirmation':
+        return Icons.hourglass_top;
+      case 'preparing':
+        return Icons.soup_kitchen;
+      case 'ready':
+        return Icons.restaurant;
+      case 'delivered':
+      case 'completed':
+        return Icons.check_circle;
+      case 'cancelled':
+        return Icons.cancel;
+      default:
+        return Icons.delivery_dining;
+    }
+  }
+
+  Color _phaseColor(Order order) {
+    switch (order.orderPhase) {
+      case 'awaiting_preparation_confirmation':
+        return Colors.amber[800]!;
+      case 'preparing':
+        return Colors.deepOrange;
+      case 'ready':
+        return Colors.green[700]!;
+      case 'delivered':
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  String _phaseTitle(Order order) {
+    switch (order.orderPhase) {
+      case 'awaiting_preparation_confirmation':
+        return order.isCookViewer
+            ? 'Confirma preparación'
+            : 'Esperando al cocinero';
+      case 'preparing':
+        return 'Preparando plato';
+      case 'ready':
+        return order.isCookViewer
+            ? 'Listo para entregar'
+            : 'Tu plato está hecho';
+      case 'delivered':
+      case 'completed':
+        return 'Pedido completado';
+      case 'cancelled':
+        return 'Pedido cancelado';
+      default:
+        return 'Pedido en curso';
+    }
+  }
+
+  String _phaseDescription(Order order) {
+    switch (order.orderPhase) {
+      case 'awaiting_preparation_confirmation':
+        return order.isCookViewer
+            ? 'Tienes hasta 5 minutos para confirmar que empezarás.'
+            : 'El cocinero debe confirmar que empezará a preparar.';
+      case 'preparing':
+        return order.isCookViewer
+            ? 'Prepara el plato y marca Plato hecho al terminar.'
+            : 'El cocinero está preparando tu pedido.';
+      case 'ready':
+        return order.isCookViewer
+            ? 'Toma una foto obligatoria y confirma la entrega.'
+            : 'El cocinero está por entregar tu pedido.';
+      case 'delivered':
+      case 'completed':
+        return 'Entrega confirmada con evidencia.';
+      default:
+        return 'Pedido activo.';
+    }
+  }
+
+  DateTime? _deadlineFor(Order order) {
+    switch (order.orderPhase) {
+      case 'awaiting_preparation_confirmation':
+        return order.preparationConfirmationDeadlineAt;
+      case 'preparing':
+        return order.preparationDeadlineAt;
+      case 'ready':
+        return order.deliveryDeadlineAt;
+      default:
+        return null;
+    }
+  }
+
+  String _timeRemainingText(DateTime deadline) {
+    final remaining = deadline.toLocal().difference(DateTime.now());
+    if (remaining.isNegative) return 'Tiempo vencido';
+    final minutes = remaining.inMinutes
+        .remainder(60)
+        .toString()
+        .padLeft(2, '0');
+    final seconds = remaining.inSeconds
+        .remainder(60)
+        .toString()
+        .padLeft(2, '0');
+    if (remaining.inHours > 0) {
+      return '${remaining.inHours}:$minutes:$seconds';
+    }
+    return '$minutes:$seconds';
+  }
+}
+
+class _OrderPhaseActions extends StatelessWidget {
+  final Order order;
+  final bool isBusy;
+  final bool isUploadingPhoto;
+  final VoidCallback onConfirmPreparation;
+  final VoidCallback onMarkReady;
+  final VoidCallback onTakeDeliveryPhoto;
+  final VoidCallback? onConfirmDelivery;
+
+  const _OrderPhaseActions({
+    required this.order,
+    required this.isBusy,
+    required this.isUploadingPhoto,
+    required this.onConfirmPreparation,
+    required this.onMarkReady,
+    required this.onTakeDeliveryPhoto,
+    required this.onConfirmDelivery,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!order.isCookViewer) {
+      return _ConsumerOrderStatus(order: order);
+    }
+
+    switch (order.orderPhase) {
+      case 'awaiting_preparation_confirmation':
+        return SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: isBusy ? null : onConfirmPreparation,
+            icon: _busyIcon(isBusy, Icons.play_arrow),
+            label: Text(isBusy ? 'Confirmando...' : 'Confirmar preparación'),
+          ),
+        );
+      case 'preparing':
+        return SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: isBusy ? null : onMarkReady,
+            icon: _busyIcon(isBusy, Icons.restaurant),
+            label: Text(isBusy ? 'Actualizando...' : 'Plato hecho'),
+          ),
+        );
+      case 'ready':
+        return Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: isUploadingPhoto ? null : onTakeDeliveryPhoto,
+                icon: _busyIcon(isUploadingPhoto, Icons.camera_alt),
+                label: Text(
+                  order.hasDeliveryPhoto
+                      ? 'Tomar otra foto'
+                      : isUploadingPhoto
+                      ? 'Subiendo foto...'
+                      : 'Tomar foto de entrega',
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: isBusy ? null : onConfirmDelivery,
+                icon: _busyIcon(isBusy, Icons.check_circle),
+                label: Text(
+                  order.hasDeliveryPhoto
+                      ? isBusy
+                          ? 'Confirmando...'
+                          : 'Confirmar entrega'
+                      : 'Foto obligatoria para entregar',
+                ),
+              ),
+            ),
+          ],
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _busyIcon(bool busy, IconData icon) {
+    if (!busy) return Icon(icon, size: 18);
+    return const SizedBox(
+      width: 18,
+      height: 18,
+      child: CircularProgressIndicator(strokeWidth: 2),
+    );
+  }
+}
+
+class _ConsumerOrderStatus extends StatelessWidget {
+  final Order order;
+  const _ConsumerOrderStatus({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final message = switch (order.orderPhase) {
+      'awaiting_preparation_confirmation' =>
+        'Te avisaremos cuando el cocinero confirme la preparación.',
+      'preparing' => 'El cocinero ya está preparando tu plato.',
+      'ready' =>
+        'Tu plato está hecho. El cocinero debe confirmar la entrega con foto.',
+      'delivered' || 'completed' => 'Pedido entregado.',
+      _ => 'Sigue el estado del pedido aquí.',
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(message),
     );
   }
 }

@@ -12,6 +12,29 @@ import '../../orders/views/active_order_screen.dart';
 import '../repositories/consumer_request_repository.dart';
 import '../viewmodels/consumer_map_home_viewmodel.dart';
 
+const _allergenOptions = [
+  _AllergenOption(
+    code: 'gluten',
+    label: 'Sin gluten',
+    icon: Icons.bakery_dining,
+  ),
+  _AllergenOption(code: 'lacteos', label: 'Sin lácteos', icon: Icons.icecream),
+  _AllergenOption(code: 'huevo', label: 'Sin huevo', icon: Icons.egg),
+  _AllergenOption(code: 'mani', label: 'Sin maní', icon: Icons.no_food),
+];
+
+class _AllergenOption {
+  final String code;
+  final String label;
+  final IconData icon;
+
+  const _AllergenOption({
+    required this.code,
+    required this.label,
+    required this.icon,
+  });
+}
+
 class ConsumerMapHomeScreen extends StatelessWidget {
   const ConsumerMapHomeScreen({super.key});
 
@@ -44,7 +67,9 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
   final _mapController = MapController();
   bool _showSearchPanel = false;
   String? _searchInitialQuery;
+  Set<String> _searchInitialAllergens = const {};
   bool _openingActiveOrder = false;
+  String? _lastCenteredRequestId;
 
   @override
   void dispose() {
@@ -78,6 +103,15 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
       });
     }
 
+    if (vm.activeRequestId != null &&
+        vm.activeRequestId != _lastCenteredRequestId) {
+      _lastCenteredRequestId = vm.activeRequestId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _mapController.move(vm.currentLatLng, 15.0);
+      });
+    }
+
     return Scaffold(
       body: Stack(
         children: [
@@ -92,6 +126,27 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.cociname.app',
               ),
+              if (vm.activeRequestId != null && !vm.hasOffers)
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: vm.currentLatLng,
+                      radius: vm.visibleSearchRadiusKm * 1000,
+                      useRadiusInMeter: true,
+                      color: Colors.deepOrange.withValues(alpha: 0.12),
+                      borderColor: Colors.deepOrange.withValues(alpha: 0.7),
+                      borderStrokeWidth: 2,
+                    ),
+                    CircleMarker(
+                      point: vm.currentLatLng,
+                      radius: vm.visibleSearchRadiusKm * 650,
+                      useRadiusInMeter: true,
+                      color: Colors.deepOrange.withValues(alpha: 0.08),
+                      borderColor: Colors.deepOrange.withValues(alpha: 0.35),
+                      borderStrokeWidth: 1,
+                    ),
+                  ],
+                ),
               if (vm.showMarkers || offerLocations.isNotEmpty)
                 MarkerLayer(
                   markers: [
@@ -178,9 +233,14 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
             _SearchPanel(
               vm: vm,
               initialQuery: _searchInitialQuery,
+              initialAllergens: _searchInitialAllergens,
               onClose: () => setState(() => _showSearchPanel = false),
             ),
-          _BottomPanel(vm: vm, onQuickSearch: _openSearchPanel),
+          _BottomPanel(
+            vm: vm,
+            onQuickSearch: _openSearchPanel,
+            onQuickAllergen: _openSearchPanelWithAllergen,
+          ),
           if (vm.isLoadingLocation)
             const Positioned(
               top: 100,
@@ -203,6 +263,15 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
   void _openSearchPanel([String? query]) {
     setState(() {
       _searchInitialQuery = query;
+      _searchInitialAllergens = const {};
+      _showSearchPanel = true;
+    });
+  }
+
+  void _openSearchPanelWithAllergen(String allergenCode) {
+    setState(() {
+      _searchInitialQuery = null;
+      _searchInitialAllergens = {allergenCode};
       _showSearchPanel = true;
     });
   }
@@ -322,11 +391,13 @@ class _TopBar extends StatelessWidget {
 class _SearchPanel extends StatefulWidget {
   final ConsumerMapHomeViewModel vm;
   final String? initialQuery;
+  final Set<String> initialAllergens;
   final VoidCallback onClose;
 
   const _SearchPanel({
     required this.vm,
     required this.initialQuery,
+    required this.initialAllergens,
     required this.onClose,
   });
 
@@ -339,6 +410,7 @@ class _SearchPanelState extends State<_SearchPanel> {
   final _quantityController = TextEditingController(text: '1');
   final _budgetController = TextEditingController();
   final _radiusController = TextEditingController(text: '4');
+  final Set<String> _selectedAllergens = {};
   bool _isCreating = false;
   String? _validationError;
 
@@ -346,6 +418,7 @@ class _SearchPanelState extends State<_SearchPanel> {
   void initState() {
     super.initState();
     _queryController.text = widget.initialQuery ?? '';
+    _selectedAllergens.addAll(widget.initialAllergens);
   }
 
   @override
@@ -353,6 +426,11 @@ class _SearchPanelState extends State<_SearchPanel> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialQuery != oldWidget.initialQuery) {
       _queryController.text = widget.initialQuery ?? '';
+    }
+    if (widget.initialAllergens != oldWidget.initialAllergens) {
+      _selectedAllergens
+        ..clear()
+        ..addAll(widget.initialAllergens);
     }
   }
 
@@ -468,23 +546,25 @@ class _SearchPanelState extends State<_SearchPanel> {
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            FilterChip(
-                              label: const Text('Sin gluten'),
-                              onSelected: (_) {},
-                            ),
-                            FilterChip(
-                              label: const Text('Sin lácteos'),
-                              onSelected: (_) {},
-                            ),
-                            FilterChip(
-                              label: const Text('Sin huevo'),
-                              onSelected: (_) {},
-                            ),
-                            FilterChip(
-                              label: const Text('Sin maní'),
-                              onSelected: (_) {},
-                            ),
+                            for (final allergen in _allergenOptions)
+                              FilterChip(
+                                label: Text(allergen.label),
+                                selected: _selectedAllergens.contains(
+                                  allergen.code,
+                                ),
+                                onSelected:
+                                    (selected) => setState(() {
+                                      if (selected) {
+                                        _selectedAllergens.add(allergen.code);
+                                      } else {
+                                        _selectedAllergens.remove(
+                                          allergen.code,
+                                        );
+                                      }
+                                    }),
+                              ),
                           ],
                         ),
                         if (_isCreating || widget.vm.isSearching)
@@ -595,6 +675,7 @@ class _SearchPanelState extends State<_SearchPanel> {
       budget: budget,
       requestedQuantity: quantity,
       maxRadius: radius,
+      allergenFilters: _selectedAllergens.toList(),
     );
 
     if (mounted) setState(() => _isCreating = false);
@@ -605,8 +686,13 @@ class _SearchPanelState extends State<_SearchPanel> {
 class _BottomPanel extends StatelessWidget {
   final ConsumerMapHomeViewModel vm;
   final ValueChanged<String> onQuickSearch;
+  final ValueChanged<String> onQuickAllergen;
 
-  const _BottomPanel({required this.vm, required this.onQuickSearch});
+  const _BottomPanel({
+    required this.vm,
+    required this.onQuickSearch,
+    required this.onQuickAllergen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -637,7 +723,11 @@ class _BottomPanel extends StatelessWidget {
             else if (vm.activeRequestId != null)
               _SearchingStatus(vm: vm)
             else
-              _DefaultChips(onQuickSearch: onQuickSearch, vm: vm),
+              _DefaultChips(
+                onQuickSearch: onQuickSearch,
+                onQuickAllergen: onQuickAllergen,
+                vm: vm,
+              ),
           ],
         ),
       ),
@@ -663,6 +753,27 @@ class _SearchingStatus extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(child: Text(vm.searchStatus)),
           ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            minHeight: 6,
+            value:
+                (vm.visibleSearchRadiusKm / vm.maxSearchRadiusKm)
+                    .clamp(0, 1)
+                    .toDouble(),
+            backgroundColor: Colors.orange[50],
+            color: Colors.deepOrange,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Radio actual: ${vm.visibleSearchRadiusKm.toStringAsFixed(1)} km de ${vm.maxSearchRadiusKm.toStringAsFixed(1)} km',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -940,9 +1051,14 @@ class _AllergenSummaryLine extends StatelessWidget {
 
 class _DefaultChips extends StatelessWidget {
   final ValueChanged<String> onQuickSearch;
+  final ValueChanged<String> onQuickAllergen;
   final ConsumerMapHomeViewModel vm;
 
-  const _DefaultChips({required this.onQuickSearch, required this.vm});
+  const _DefaultChips({
+    required this.onQuickSearch,
+    required this.onQuickAllergen,
+    required this.vm,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -967,6 +1083,14 @@ class _DefaultChips extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
+        Text(
+          'Platos rápidos',
+          style: TextStyle(
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
         SizedBox(
           height: 60,
           child: Row(
@@ -1003,6 +1127,31 @@ class _DefaultChips extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Restricciones rápidas',
+          style: TextStyle(
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 48,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _allergenOptions.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final allergen = _allergenOptions[index];
+              return ActionChip(
+                avatar: Icon(allergen.icon, size: 16, color: Colors.deepOrange),
+                label: Text(allergen.label),
+                onPressed: () => onQuickAllergen(allergen.code),
+              );
+            },
           ),
         ),
       ],

@@ -254,7 +254,15 @@ Falta:
 
 ## Proximo Paso Recomendado
 
-1. Implementar Etapa 2 pendiente: chips de alergenos y radio expansivo tipo inDrive centrado en consumidor.
-2. Implementar extension de Etapa 4: estados de pedido, temporizadores, foto obligatoria y cierre `completed`.
+1. Aplicar y probar la migracion `20260522100000_order_completion_flow.sql` en Supabase.
+2. Probar en dos sesiones el flujo nuevo: aceptar oferta, confirmar preparacion, plato hecho, foto de entrega, confirmar entrega y cierre `completed`.
 3. Completar filtros de Etapa 3 por distancia, categoria/plato y alergenos.
 4. Crear seeds y checklist de ensayo para Etapa 5.
+
+## Implementado Tras Este Estado
+
+- Nueva migracion `20260522100000_order_completion_flow.sql` para fases de pedido, temporizadores, Storage de fotos de entrega, tabla `order_delivery_photos` y RPCs de avance: `confirm_order_preparation`, `mark_order_ready`, `register_order_delivery_photo`, `confirm_order_delivery`.
+- `Order` y `OrderRepository` ahora soportan fases, deadlines, rol del visor, foto de entrega y acciones de cierre.
+- `ActiveOrderScreen` ahora muestra UI por rol: cocinero confirma preparacion, marca `Plato hecho`, toma foto obligatoria y confirma entrega; consumidor ve el estado analogo y temporizadores.
+- `ConsumerMapHomeScreen` ahora conecta chips de alergenos al payload, agrega restricciones rapidas, centra el mapa al solicitar y muestra circulos expansivos de radio.
+- `ConsumerMapHomeViewModel` ahora mantiene `visibleSearchRadiusKm`, incrementa el radio visual y detiene la expansion al recibir ofertas/cancelar/aceptar.

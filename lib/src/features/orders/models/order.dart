@@ -8,6 +8,18 @@ class Order {
   final double agreedPrice;
   final int requestedQuantity;
   final String status;
+  final String orderPhase;
+  final int? estimatedPreparationMinutes;
+  final DateTime? preparationConfirmationDeadlineAt;
+  final DateTime? preparationConfirmedAt;
+  final DateTime? preparationDeadlineAt;
+  final DateTime? readyAt;
+  final DateTime? deliveryDeadlineAt;
+  final DateTime? deliveredAt;
+  final DateTime? completedAt;
+  final String? viewerRole;
+  final String? deliveryPhotoStoragePath;
+  final String? deliveryPhotoPublicUrl;
   final DateTime createdAt;
   final String? dishTitle;
   final String? cookBusinessName;
@@ -29,6 +41,18 @@ class Order {
     required this.agreedPrice,
     this.requestedQuantity = 1,
     this.status = 'active',
+    this.orderPhase = 'awaiting_preparation_confirmation',
+    this.estimatedPreparationMinutes,
+    this.preparationConfirmationDeadlineAt,
+    this.preparationConfirmedAt,
+    this.preparationDeadlineAt,
+    this.readyAt,
+    this.deliveryDeadlineAt,
+    this.deliveredAt,
+    this.completedAt,
+    this.viewerRole,
+    this.deliveryPhotoStoragePath,
+    this.deliveryPhotoPublicUrl,
     required this.createdAt,
     this.dishTitle,
     this.cookBusinessName,
@@ -47,6 +71,13 @@ class Order {
   bool get hasConsumerLocation =>
       consumerLatitude != null && consumerLongitude != null;
 
+  bool get isCookViewer => viewerRole == 'cook';
+
+  bool get isConsumerViewer => viewerRole == 'consumer';
+
+  bool get hasDeliveryPhoto =>
+      deliveryPhotoPublicUrl != null && deliveryPhotoPublicUrl!.isNotEmpty;
+
   factory Order.fromMap(Map<String, dynamic> map) {
     return Order(
       id: map['id'] as String? ?? '',
@@ -58,6 +89,22 @@ class Order {
       agreedPrice: (map['agreed_price'] as num?)?.toDouble() ?? 0,
       requestedQuantity: (map['requested_quantity'] as num?)?.toInt() ?? 1,
       status: map['status'] as String? ?? 'active',
+      orderPhase:
+          map['order_phase'] as String? ?? 'awaiting_preparation_confirmation',
+      estimatedPreparationMinutes:
+          (map['estimated_preparation_minutes'] as num?)?.toInt(),
+      preparationConfirmationDeadlineAt: _dateTime(
+        map['preparation_confirmation_deadline_at'],
+      ),
+      preparationConfirmedAt: _dateTime(map['preparation_confirmed_at']),
+      preparationDeadlineAt: _dateTime(map['preparation_deadline_at']),
+      readyAt: _dateTime(map['ready_at']),
+      deliveryDeadlineAt: _dateTime(map['delivery_deadline_at']),
+      deliveredAt: _dateTime(map['delivered_at']),
+      completedAt: _dateTime(map['completed_at']),
+      viewerRole: map['viewer_role'] as String?,
+      deliveryPhotoStoragePath: map['delivery_photo_storage_path'] as String?,
+      deliveryPhotoPublicUrl: map['delivery_photo_public_url'] as String?,
       createdAt:
           DateTime.tryParse(map['created_at'] as String? ?? '') ??
           DateTime.now(),
@@ -71,5 +118,10 @@ class Order {
       dishPhotoStoragePath: map['dish_photo_storage_path'] as String?,
       dishPhotoPublicUrl: map['dish_photo_public_url'] as String?,
     );
+  }
+
+  static DateTime? _dateTime(Object? value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value as String);
   }
 }

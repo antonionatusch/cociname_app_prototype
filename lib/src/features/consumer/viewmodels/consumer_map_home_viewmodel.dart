@@ -92,13 +92,17 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
 
       final request = activeRequests.first;
       _activeRequestId = request.id;
+      _visibleSearchRadiusKm = request.currentRadiusKm;
+      _maxSearchRadiusKm = request.maxRadiusKm;
       _searchStatus =
           request.status == 'matched'
               ? 'Solicitud emparejada. Revisando pedido...'
-              : 'Solicitud activa. Esperando ofertas...';
+              : 'Buscando cocineros en ${_visibleSearchRadiusKm.toStringAsFixed(1)} km...';
       _receivedOffers = await offerRepository.fetchOffersForRequest(request.id);
       if (_receivedOffers.isNotEmpty) {
         _searchStatus = '${_receivedOffers.length} oferta(s) recibida(s)';
+      } else {
+        _startRadiusExpansion();
       }
       _startOfferPolling();
       notifyListeners();
@@ -180,6 +184,12 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   String _searchStatus = '';
   String get searchStatus => _searchStatus;
 
+  double _visibleSearchRadiusKm = 1;
+  double get visibleSearchRadiusKm => _visibleSearchRadiusKm;
+
+  double _maxSearchRadiusKm = 4;
+  double get maxSearchRadiusKm => _maxSearchRadiusKm;
+
   Future<String?> createSearchRequest({
     required String query,
     required double budget,
@@ -189,6 +199,8 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   }) async {
     _isSearching = true;
     _searchStatus = 'Buscando cocineros cerca...';
+    _visibleSearchRadiusKm = 1;
+    _maxSearchRadiusKm = maxRadius;
     _error = null;
     notifyListeners();
 
@@ -205,7 +217,9 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
       );
       _activeRequestId = requestId;
       _receivedOffers = const [];
-      _searchStatus = 'Solicitud creada. Esperando ofertas...';
+      _searchStatus =
+          'Buscando cocineros en ${_visibleSearchRadiusKm.toStringAsFixed(1)} km...';
+      _startRadiusExpansion();
       _startOfferPolling();
       return requestId;
     } catch (e) {
@@ -223,9 +237,11 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
       try {
         await requestRepository.cancelRequest(_activeRequestId!);
         _offerPollTimer?.cancel();
+        _radiusTimer?.cancel();
         _activeRequestId = null;
         _receivedOffers = const [];
         _searchStatus = '';
+        _visibleSearchRadiusKm = 1;
         _error = null;
         notifyListeners();
       } catch (e) {
@@ -242,6 +258,26 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
 
   Timer? _offerPollTimer;
   Timer? _markerPollTimer;
+  Timer? _radiusTimer;
+
+  void _startRadiusExpansion() {
+    _radiusTimer?.cancel();
+    _radiusTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (_activeRequestId == null || _receivedOffers.isNotEmpty) {
+        _radiusTimer?.cancel();
+        return;
+      }
+      final nextRadius = (_visibleSearchRadiusKm + 0.75).clamp(
+        1,
+        _maxSearchRadiusKm,
+      );
+      if (nextRadius == _visibleSearchRadiusKm) return;
+      _visibleSearchRadiusKm = nextRadius.toDouble();
+      _searchStatus =
+          'Buscando cocineros en ${_visibleSearchRadiusKm.toStringAsFixed(1)} km...';
+      notifyListeners();
+    });
+  }
 
   void _startOfferPolling() {
     _offerPollTimer?.cancel();
@@ -268,6 +304,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
       );
       if (_receivedOffers.isNotEmpty) {
         _searchStatus = '${_receivedOffers.length} oferta(s) recibida(s)';
+        _radiusTimer?.cancel();
       }
       notifyListeners();
     } catch (_) {}
@@ -277,6 +314,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
     try {
       await orderRepository.acceptOffer(offerId);
       _offerPollTimer?.cancel();
+      _radiusTimer?.cancel();
       final order = await orderRepository.fetchActiveOrder();
       _activeOrder = order;
       _activeRequestId = null;
@@ -294,6 +332,7 @@ class ConsumerMapHomeViewModel extends ChangeNotifier {
   void dispose() {
     _offerPollTimer?.cancel();
     _markerPollTimer?.cancel();
+    _radiusTimer?.cancel();
     super.dispose();
   }
 }
