@@ -14,17 +14,17 @@ class CookRequestRepository {
     double? cookLongitude,
     double? maxRadiusKm,
   }) async {
-    final response = await _client
-        .from('consumer_requests')
-        .select()
-        .eq('status', 'searching')
-        .order('created_at', ascending: false)
-        .limit(20);
+    final response = await _client.rpc(
+      'get_active_consumer_requests_for_cook',
+      params: {'p_limit': 20},
+    );
 
     final requests =
         (response as List<dynamic>)
             .map(
-              (item) => ConsumerRequest.fromMap(item as Map<String, dynamic>),
+              (item) => ConsumerRequest.fromMap(
+                Map<String, dynamic>.from(item as Map),
+              ),
             )
             .toList();
 

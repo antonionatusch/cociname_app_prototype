@@ -68,6 +68,7 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
             : mediaQuery.viewPadding.bottom + 20;
     final selectedPublication = _selectedPublication;
     final referenceTotal = _referenceTotal;
+    final consumerName = widget.request.consumerDisplayName;
     final hasInsufficientQuantity =
         selectedPublication != null &&
         selectedPublication.availableQuantity <
@@ -95,6 +96,13 @@ class _CreateOfferSheetState extends State<CreateOfferSheet> {
               'Ofertar para: ${widget.request.queryText}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            if (consumerName != null && consumerName.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Consumidor: ${consumerName.trim()}',
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+            ],
             const SizedBox(height: 4),
             Text(
               'Cantidad solicitada: ${widget.request.requestedQuantity}',

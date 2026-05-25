@@ -10,6 +10,12 @@ class ConsumerRequest {
   final double? longitude;
   final String status;
   final DateTime createdAt;
+  final String? consumerDisplayName;
+  final String? consumerZoneLabel;
+  final int offerCount;
+  final String? acceptedCookBusinessName;
+  final String? acceptedDishTitle;
+  final DateTime? completedAt;
 
   const ConsumerRequest({
     required this.id,
@@ -23,6 +29,12 @@ class ConsumerRequest {
     this.longitude,
     this.status = 'searching',
     required this.createdAt,
+    this.consumerDisplayName,
+    this.consumerZoneLabel,
+    this.offerCount = 0,
+    this.acceptedCookBusinessName,
+    this.acceptedDishTitle,
+    this.completedAt,
   });
 
   factory ConsumerRequest.fromMap(Map<String, dynamic> map) {
@@ -44,6 +56,17 @@ class ConsumerRequest {
       createdAt:
           DateTime.tryParse(map['created_at'] as String? ?? '') ??
           DateTime.now(),
+      consumerDisplayName: map['consumer_display_name'] as String?,
+      consumerZoneLabel: map['consumer_zone_label'] as String?,
+      offerCount: (map['offer_count'] as num?)?.toInt() ?? 0,
+      acceptedCookBusinessName: map['accepted_cook_business_name'] as String?,
+      acceptedDishTitle: map['accepted_dish_title'] as String?,
+      completedAt: _dateTime(map['completed_at']),
     );
+  }
+
+  static DateTime? _dateTime(Object? value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value as String);
   }
 }

@@ -50,6 +50,9 @@ class CookDashboardViewModel extends ChangeNotifier {
   List<CookActiveOffer> _activeOffers = const [];
   List<CookActiveOffer> get activeOffers => _activeOffers;
 
+  List<Order> _completedOffers = const [];
+  List<Order> get completedOffers => _completedOffers;
+
   Order? _activeOrder;
   Order? get activeOrder => _activeOrder;
 
@@ -115,9 +118,11 @@ class CookDashboardViewModel extends ChangeNotifier {
       final results = await Future.wait([
         publicationRepository.fetchOwnPublications(),
         publicationRepository.fetchCookAvailability(),
+        orderRepository.fetchCompletedCookOrders(),
       ]);
       _publications = results[0] as List<DishPublication>;
       _isAvailable = results[1] as bool;
+      _completedOffers = results[2] as List<Order>;
       await _pollActiveOrder();
       await _pollActiveOffers();
     } catch (_) {

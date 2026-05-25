@@ -78,6 +78,24 @@ class OrderRepository {
     if (list.isEmpty) return null;
 
     final map = Map<String, dynamic>.from(list.first as Map);
+    _hydratePhotoUrls(map);
+    return Order.fromMap(map);
+  }
+
+  Future<List<Order>> fetchCompletedCookOrders({int limit = 5}) async {
+    final response = await _client.rpc(
+      'get_completed_cook_orders',
+      params: {'p_limit': limit},
+    );
+
+    return (response as List<dynamic>).map((item) {
+      final map = Map<String, dynamic>.from(item as Map);
+      _hydratePhotoUrls(map);
+      return Order.fromMap(map);
+    }).toList();
+  }
+
+  void _hydratePhotoUrls(Map<String, dynamic> map) {
     final storagePath = map['dish_photo_storage_path'] as String?;
     final publicUrl = map['dish_photo_public_url'] as String?;
     if ((publicUrl == null || publicUrl.isEmpty) &&
@@ -96,6 +114,5 @@ class OrderRepository {
           .from('order-delivery-photos')
           .getPublicUrl(deliveryStoragePath);
     }
-    return Order.fromMap(map);
   }
 }

@@ -20,6 +20,7 @@ import '../../maps/views/location_picker_screen.dart';
 import '../../offers/models/cook_active_offer.dart';
 import '../../offers/repositories/offer_repository.dart';
 import '../../offers/views/create_offer_sheet.dart';
+import '../../orders/models/order.dart';
 import '../../orders/repositories/order_repository.dart';
 import '../../../core/helpers/allergen_display_helper.dart';
 import '../../orders/views/active_order_screen.dart';
@@ -288,6 +289,19 @@ class _CookDashboardScreenState extends State<CookDashboardScreen> {
                       (offer) => _ActiveOfferCard(offer: offer),
                     ),
                   ],
+                  if (!vm.isLoading || vm.completedOffers.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      'Ofertas completadas',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    if (vm.completedOffers.isEmpty)
+                      const _EmptyCompletedOffersCard(),
+                    ...vm.completedOffers.map(
+                      (offer) => _CompletedOfferCard(order: offer),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -374,6 +388,11 @@ class _IncomingRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final consumerName =
+        request.consumerDisplayName?.trim().isNotEmpty == true
+            ? request.consumerDisplayName!.trim()
+            : 'Consumidor';
+    final consumerZone = request.consumerZoneLabel;
 
     return Card(
       child: Padding(
@@ -383,12 +402,32 @@ class _IncomingRequestCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                Icon(Icons.person, color: colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    consumerName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            if (consumerZone != null && consumerZone.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Zona del consumidor: ${consumerZone.trim()}',
+                style: TextStyle(color: Colors.grey[700], fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
                 Icon(Icons.search, color: colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Busca: ${request.queryText}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -1383,7 +1422,7 @@ class _ActiveOfferCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    offer.consumerDisplayName ?? 'Consumidor',
+                    'Consumidor: ${offer.consumerDisplayName ?? 'Consumidor'}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -1410,10 +1449,7 @@ class _ActiveOfferCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _InfoChip(label: 'Cantidad: ${offer.requestedQuantity}'),
-                _InfoChip(
-                  label:
-                      'Prep. ${offer.estimatedMinutes ?? '?'} min',
-                ),
+                _InfoChip(label: 'Prep. ${offer.estimatedMinutes ?? '?'} min'),
                 if (offer.consumerTargetPrice != null)
                   _InfoChip(
                     label:
@@ -1433,4 +1469,111 @@ class _ActiveOfferCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CompletedOfferCard extends StatelessWidget {
+  final Order order;
+
+  const _CompletedOfferCard({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final consumerName = order.consumerDisplayName ?? 'Consumidor';
+    final dishTitle = order.dishTitle ?? 'Plato ofertado';
+    final completedAt = order.completedAt ?? order.createdAt;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppTheme.success),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    dishTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  'Bs. ${order.agreedPrice.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.person, size: 16, color: Colors.grey[700]),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Solicitado por $consumerName',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _InfoChip(label: 'Cantidad: ${order.requestedQuantity}'),
+                _InfoChip(
+                  label: 'Completada: ${_formatDashboardDate(completedAt)}',
+                ),
+                if (order.deliveryPhotoPublicUrl?.isNotEmpty == true)
+                  const _InfoChip(label: 'Entrega con foto'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyCompletedOffersCard extends StatelessWidget {
+  const _EmptyCompletedOffersCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.grey[400]),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Aún no tienes ofertas completadas.',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatDashboardDate(DateTime value) {
+  final local = value.toLocal();
+  final day = local.day.toString().padLeft(2, '0');
+  final month = local.month.toString().padLeft(2, '0');
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$day/$month $hour:$minute';
 }

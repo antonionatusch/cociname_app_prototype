@@ -66,6 +66,20 @@ class ConsumerRequestRepository {
         .toList();
   }
 
+  Future<List<ConsumerRequest>> fetchRecentRequests({int limit = 5}) async {
+    final response = await _client.rpc(
+      'get_recent_consumer_requests',
+      params: {'p_limit': limit},
+    );
+
+    return (response as List<dynamic>)
+        .map(
+          (item) =>
+              ConsumerRequest.fromMap(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+  }
+
   Future<void> cancelRequest(String requestId) async {
     await _client.rpc(
       'cancel_consumer_request',

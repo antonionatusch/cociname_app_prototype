@@ -263,12 +263,12 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
                           order.consumerLatitude!,
                           order.consumerLongitude!,
                         ),
-                        width: 82,
+                        width: 120,
                         height: 64,
-                        child: const _MapMarkerBadge(
+                        child: _MapMarkerBadge(
                           icon: Icons.person,
                           color: Colors.blue,
-                          label: 'Consumidor',
+                          label: resolvedConsumerLabel,
                         ),
                       ),
                     if (order.hasPublicationLocation)
@@ -277,12 +277,12 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
                           order.publicationLatitude!,
                           order.publicationLongitude!,
                         ),
-                        width: 72,
+                        width: 120,
                         height: 64,
-                        child: const _MapMarkerBadge(
+                        child: _MapMarkerBadge(
                           icon: Icons.restaurant,
                           color: Colors.deepOrange,
-                          label: 'Cocinero',
+                          label: resolvedCookLabel,
                         ),
                       ),
                   ],
@@ -590,8 +590,12 @@ class _ActiveOrderScreenState extends State<ActiveOrderScreen> {
   Duration _serverAdjustedTimeRemaining(DateTime deadline) {
     final serverNow = _order.serverNow;
     final localNow = DateTime.now().toUtc();
-    if (serverNow == null) return deadline.toUtc().difference(localNow);
-    if (_serverNowReceivedAt == null) return deadline.toUtc().difference(localNow);
+    if (serverNow == null) {
+      return deadline.toUtc().difference(localNow);
+    }
+    if (_serverNowReceivedAt == null) {
+      return deadline.toUtc().difference(localNow);
+    }
     final elapsedSinceFetch = localNow.difference(_serverNowReceivedAt!);
     final estimatedServerNow = serverNow.add(elapsedSinceFetch);
     return deadline.toUtc().difference(estimatedServerNow);
@@ -810,16 +814,24 @@ class _MapMarkerBadge extends StatelessWidget {
           child: Icon(icon, color: Colors.white, size: 22),
         ),
         const SizedBox(height: 2),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 112),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ),
