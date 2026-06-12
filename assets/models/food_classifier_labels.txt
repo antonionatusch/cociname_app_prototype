@@ -1,0 +1,6 @@
+0 empanada_queso_frita
+1 empanada_queso_integral
+2 pizza
+3 hamburguesa
+4 cunape
+5 unknown_food
