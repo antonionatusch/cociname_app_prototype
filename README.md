@@ -1,5 +1,9 @@
 # CocinaME
 
+<p align="center">
+  <img src="assets/icon/icon.png" alt="CocinaME" width="240">
+</p>
+
 CocinaME es un prototipo funcional desarrollado para validar los casos de uso principales de una plataforma que conecta consumidores con cocineros locales.
 
 El proyecto implementa flujos clave del negocio: registro y onboarding, publicación de platos, búsqueda geolocalizada, ofertas entre consumidor y cocinero, pedido activo, advertencias preventivas de alérgenos e inferencia visual local con TFLite.
