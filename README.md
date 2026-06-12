@@ -109,4 +109,4 @@ Este repositorio no debe incluir archivos `.env`, credenciales reales, tokens, d
 
 ## Licencia
 
-Este proyecto está publicado bajo la licencia Apache 2.0. Ver `LICENSE`.
+Este proyecto está publicado bajo la licencia Apache 2.0. Ver `LICENSE` y `NOTICE`.
