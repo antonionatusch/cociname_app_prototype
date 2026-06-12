@@ -9,7 +9,7 @@ El proyecto implementa flujos clave del negocio: registro y onboarding, publicac
 - Tipo: prototipo funcional.
 - Enfoque: validación de casos de uso principales del negocio.
 - Alcance: demostración técnica y académica, no producto en producción.
-- Reconocimiento: proyecto ganador de primer lugar compartido en la [TecnoUPSA 2026.]([url](https://www.linkedin.com/posts/antonionatusch_estos-d%C3%ADas-he-estado-pensando-en-volver-ugcPost-7471217891678314496-rWA2/?utm_source=share&utm_medium=member_desktop&rcm=ACoAAEKdH_QB2qd2N1w1t3i5CaTD_fBFI1-PQ8s))
+- Reconocimiento: proyecto ganador de primer lugar compartido en la [TecnoUPSA 2026](https://www.linkedin.com/posts/antonionatusch_estos-d%C3%ADas-he-estado-pensando-en-volver-ugcPost-7471217891678314496-rWA2/?utm_source=share&utm_medium=member_desktop&rcm=ACoAAEKdH_QB2qd2N1w1t3i5CaTD_fBFI1-PQ8s).
 
 ## Funcionalidades principales
 
@@ -24,7 +24,7 @@ El proyecto implementa flujos clave del negocio: registro y onboarding, publicac
 - Vista de pedido activo para consumidor y cocinero.
 - Persistencia en Supabase con PostgreSQL, RPCs y Storage.
 
-## Stack tecnico
+## Stack técnico
 
 - Flutter y Dart.
 - Provider para inyección simple de dependencias y estado.
@@ -44,7 +44,7 @@ El proyecto implementa flujos clave del negocio: registro y onboarding, publicac
 - `supabase/seed.sql`: datos ficticios de desarrollo.
 - `docs/`: documentación pública del prototipo.
 
-## Configuracion local
+## Configuración local
 
 Requisitos:
 
@@ -52,7 +52,7 @@ Requisitos:
 - Una instancia de Supabase local o remota.
 - Android Studio, emulador o dispositivo físico si se quiere probar la app móvil.
 
-Pasos basicos:
+Pasos básicos:
 
 ```bash
 flutter pub get
@@ -70,7 +70,7 @@ Aplica las migraciones de `supabase/migrations` en tu proyecto Supabase y, si lo
 
 Para más detalle revisa `docs/SUPABASE_SETUP.md`.
 
-## Ejecucion
+## Ejecución
 
 ```bash
 flutter run
@@ -83,7 +83,7 @@ flutter analyze
 flutter test
 ```
 
-## Documentacion
+## Documentación
 
 - `docs/ARCHITECTURE.md`: arquitectura del prototipo.
 - `docs/DEMO.md`: flujo sugerido para revisar los casos de uso.
