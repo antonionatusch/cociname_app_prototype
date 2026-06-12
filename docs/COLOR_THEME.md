@@ -178,12 +178,6 @@ info = #3A7CA5
 
 ---
 
-## 8. Prompt corto para OpenCode
-
-Usa una identidad visual cálida y moderna para la app Flutter de CocinaME. El color principal de marca es `#ED6E1F`. La interfaz debe transmitir energía, entusiasmo, creatividad, calidez, sociabilidad y juventud. Usa fondos claros cálidos (`#FFF9F2`, `#FFFDF9`), texto en marrones oscuros cálidos (`#2F241C`, `#6B5848`) y reserva el naranja para acciones clave, elementos activos y acentos de marca. Evita una estética fría o corporativa; debe sentirse cercana, apetecible, dinámica y humana.
-
----
-
-## 9. Decisión de diseño
+## 8. Decisión de diseño
 
 La lógica de esta paleta no es solo “usar naranja porque el logo es naranja”, sino construir una identidad coherente con el significado psicológico y simbólico que quieres proyectar. CocinaME debe verse como una app de comida casera con movimiento, calidez social y energía positiva.

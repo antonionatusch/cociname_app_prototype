@@ -168,7 +168,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : TextInputType.phone,
                   decoration: InputDecoration(
                     labelText: isEmail ? 'Correo' : 'Teléfono',
-                    hintText: isEmail ? 'nombre@correo.com' : '+59170000001',
+                    hintText: isEmail ? 'nombre@correo.com' : '+59170000000',
                   ),
                   validator: (value) {
                     final text = value?.trim() ?? '';
@@ -181,7 +181,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return 'Ingresa un correo válido.';
                     }
                     if (!isEmail && !text.startsWith('+')) {
-                      return 'Usa formato internacional, por ejemplo +59170000001.';
+                      return 'Usa formato internacional, por ejemplo +59170000000.';
                     }
                     return null;
                   },

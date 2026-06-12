@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _identifierController,
                   decoration: const InputDecoration(
                     labelText: 'Correo o teléfono',
-                    hintText: 'ejemplo@correo.com o +59170000001',
+                    hintText: 'ejemplo@correo.com o +59170000000',
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {

@@ -75,8 +75,11 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
   @override
   Widget build(BuildContext context) {
     final isEmail = widget.args.method == VerificationMethod.email;
-    final testPhone = dotenv.maybeGet(AppEnv.supabaseTestPhone);
-    final testOtp = dotenv.maybeGet(AppEnv.supabaseTestOtp);
+    final showDevAuthHelp = dotenv.maybeGet(AppEnv.showDevAuthHelp) == 'true';
+    final testPhone =
+        showDevAuthHelp ? dotenv.maybeGet(AppEnv.supabaseTestPhone) : null;
+    final testOtp =
+        showDevAuthHelp ? dotenv.maybeGet(AppEnv.supabaseTestOtp) : null;
 
     return AnimatedBuilder(
       animation: _viewModel,
@@ -93,15 +96,17 @@ class _VerifyIdentityScreenState extends State<VerifyIdentityScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Revisa la bandeja local de correo en Mailpit/Inbucket y abre el mensaje enviado a ${widget.args.identifier}.',
+                        'Revisa el mensaje enviado a ${widget.args.identifier} y confirma tu cuenta.',
                       ),
-                      const SizedBox(height: 16),
-                      const ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.mail_outline_rounded),
-                        title: Text('Studio Mailpit'),
-                        subtitle: Text('http://127.0.0.1:42694'),
-                      ),
+                      if (showDevAuthHelp) ...[
+                        const SizedBox(height: 16),
+                        const ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(Icons.mail_outline_rounded),
+                          title: Text('Bandeja local de correo'),
+                          subtitle: Text('http://127.0.0.1:42694'),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       const Text(
                         'Cuando ya hayas confirmado tu correo, vuelve e inicia sesión normalmente para continuar con el onboarding.',

@@ -1,5 +1,5 @@
 name: cociname_app
-description: "A new Flutter project."
+description: "Prototipo funcional de CocinaME para validar casos de uso principales del negocio."
 
 publish_to: 'none'
 
@@ -37,8 +37,8 @@ flutter:
   uses-material-design: true
   assets:
     - .env
-    - assets/models/tecnoupsa_food_classifier.tflite
-    - assets/models/tecnoupsa_labels.txt
+    - assets/models/food_classifier.tflite
+    - assets/models/food_classifier_labels.txt
 
 flutter_launcher_icons:
   android: true

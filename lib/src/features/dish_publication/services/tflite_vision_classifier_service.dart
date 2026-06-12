@@ -9,8 +9,8 @@ class TfliteVisionClassifierService {
   Interpreter? _interpreter;
   List<String>? _labels;
 
-  static const _modelPath = 'assets/models/tecnoupsa_food_classifier.tflite';
-  static const _labelsPath = 'assets/models/tecnoupsa_labels.txt';
+  static const _modelPath = 'assets/models/food_classifier.tflite';
+  static const _labelsPath = 'assets/models/food_classifier_labels.txt';
 
   static const _inputSize = 224;
   static const _recognizedThreshold = 0.75;
@@ -20,14 +20,17 @@ class TfliteVisionClassifierService {
     try {
       _interpreter = await Interpreter.fromAsset(_modelPath);
       final labelsContent = await rootBundle.loadString(_labelsPath);
-      _labels = labelsContent
-          .split('\n')
-          .map((line) {
-            final parts = line.trim().split(' ');
-            return parts.length > 1 ? parts.sublist(1).join(' ') : line.trim();
-          })
-          .where((label) => label.isNotEmpty)
-          .toList();
+      _labels =
+          labelsContent
+              .split('\n')
+              .map((line) {
+                final parts = line.trim().split(' ');
+                return parts.length > 1
+                    ? parts.sublist(1).join(' ')
+                    : line.trim();
+              })
+              .where((label) => label.isNotEmpty)
+              .toList();
     } catch (e) {
       throw Exception('Error al cargar el modelo TFLite: $e');
     }
@@ -41,16 +44,21 @@ class TfliteVisionClassifierService {
     }
 
     final input = _preprocessImage(imageBytes);
-    final output = List.filled(1 * (_labels?.length ?? 0), 0.0).reshape([1, _labels!.length]);
+    final output = List.filled(
+      1 * (_labels?.length ?? 0),
+      0.0,
+    ).reshape([1, _labels!.length]);
 
     _interpreter!.run(input, output);
 
     final predictions = <VisionPrediction>[];
     for (var i = 0; i < _labels!.length; i++) {
-      predictions.add(VisionPrediction(
-        label: _labels![i],
-        confidence: output[0][i] as double,
-      ));
+      predictions.add(
+        VisionPrediction(
+          label: _labels![i],
+          confidence: output[0][i] as double,
+        ),
+      );
     }
 
     predictions.sort((a, b) => b.confidence.compareTo(a.confidence));
@@ -72,8 +80,15 @@ class TfliteVisionClassifierService {
       throw Exception('No se pudo decodificar la imagen');
     }
 
-    final resized = img.copyResize(decoded, width: _inputSize, height: _inputSize);
-    final input = List.filled(1 * _inputSize * _inputSize * 3, 0.0).reshape([1, _inputSize, _inputSize, 3]);
+    final resized = img.copyResize(
+      decoded,
+      width: _inputSize,
+      height: _inputSize,
+    );
+    final input = List.filled(
+      1 * _inputSize * _inputSize * 3,
+      0.0,
+    ).reshape([1, _inputSize, _inputSize, 3]);
 
     for (var y = 0; y < _inputSize; y++) {
       for (var x = 0; x < _inputSize; x++) {

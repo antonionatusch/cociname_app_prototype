@@ -4,8 +4,6 @@
 .dart_tool/
 .packages
 build/
-# If you're building an application, you may want to check-in your pubspec.lock
-pubspec.lock
 
 # Directory created by dartdoc
 # If you don't generate documentation locally you can remove this line.
@@ -13,6 +11,7 @@ doc/api/
 
 # dotenv environment variables file
 .env*
+!.env.template
 
 # Avoid committing generated Javascript files:
 *.dart.js
@@ -27,6 +26,8 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
 # Supabase internal directories and local secrets
 supabase/.temp/
 supabase/.branches/

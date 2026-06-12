@@ -1,4 +1,4 @@
-package com.example.cociname_app
+package dev.tusch.cociname
 
 import io.flutter.embedding.android.FlutterActivity
 
