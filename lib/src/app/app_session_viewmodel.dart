@@ -10,6 +10,7 @@ import '../features/onboarding/repositories/onboarding_repository.dart';
 enum AppSessionDestination {
   loading,
   unauthenticated,
+  profileLoadError,
   onboarding,
   consumerHome,
   cookHome,
@@ -26,10 +27,12 @@ class AppSessionViewModel extends ChangeNotifier {
   StreamSubscription<dynamic>? _authSubscription;
   bool _loading = true;
   List<ProfileSummary> _profiles = const <ProfileSummary>[];
+  String? _profileLoadError;
 
   bool get loading => _loading;
   bool get isAuthenticated => _authRepository.currentSession != null;
   List<ProfileSummary> get profiles => _profiles;
+  String? get profileLoadError => _profileLoadError;
   String get displayName {
     final metadata = _authRepository.currentUser?.userMetadata;
     final fullName = metadata?['full_name'] as String?;
@@ -43,6 +46,9 @@ class AppSessionViewModel extends ChangeNotifier {
   AppSessionDestination get destination {
     if (_loading) return AppSessionDestination.loading;
     if (!isAuthenticated) return AppSessionDestination.unauthenticated;
+    if (_profileLoadError != null) {
+      return AppSessionDestination.profileLoadError;
+    }
 
     final activeProfiles =
         _profiles
@@ -76,6 +82,7 @@ class AppSessionViewModel extends ChangeNotifier {
 
   Future<void> refresh() async {
     _loading = true;
+    _profileLoadError = null;
     notifyListeners();
 
     if (!isAuthenticated) {
@@ -87,8 +94,11 @@ class AppSessionViewModel extends ChangeNotifier {
 
     try {
       _profiles = await _onboardingRepository.fetchOwnProfiles();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load user profiles: $error');
+      debugPrintStack(stackTrace: stackTrace);
       _profiles = const <ProfileSummary>[];
+      _profileLoadError = error.toString();
     } finally {
       _loading = false;
       notifyListeners();

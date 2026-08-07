@@ -55,6 +55,35 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
             );
           case AppSessionDestination.unauthenticated:
             return LoginScreen(authRepository: widget.authRepository);
+          case AppSessionDestination.profileLoadError:
+            return Scaffold(
+              appBar: AppBar(title: const Text('No pudimos cargar tu perfil')),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Ocurrió un error al consultar tus perfiles. Intenta nuevamente.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _viewModel.profileLoadError ?? 'Error desconocido',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: _viewModel.refresh,
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
           case AppSessionDestination.onboarding:
             return OnboardingFlowScreen(
               onboardingRepository: widget.onboardingRepository,
