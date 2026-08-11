@@ -125,7 +125,9 @@ class CookDashboardViewModel extends ChangeNotifier {
       _completedOffers = results[2] as List<Order>;
       await _pollActiveOrder();
       await _pollActiveOffers();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load cook dashboard: $error');
+      debugPrintStack(stackTrace: stackTrace);
       _error = 'No se pudo cargar tu panel. Intentalo nuevamente.';
     }
 
