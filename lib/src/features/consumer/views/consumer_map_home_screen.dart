@@ -236,11 +236,12 @@ class _ConsumerMapViewState extends State<_ConsumerMapView> {
               initialAllergens: _searchInitialAllergens,
               onClose: () => setState(() => _showSearchPanel = false),
             ),
-          _BottomPanel(
-            vm: vm,
-            onQuickSearch: _openSearchPanel,
-            onQuickAllergen: _openSearchPanelWithAllergen,
-          ),
+          if (!_showSearchPanel)
+            _BottomPanel(
+              vm: vm,
+              onQuickSearch: _openSearchPanel,
+              onQuickAllergen: _openSearchPanelWithAllergen,
+            ),
           if (vm.isLoadingLocation)
             const Positioned(
               top: 100,
